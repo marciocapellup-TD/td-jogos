@@ -83,15 +83,23 @@ language plpgsql
 as $$
 declare
   v_inicio date;
+  v_fim date;
   v_semana int;
   v_meta_mov int;
   v_meta_men int;
 begin
+  v_inicio := (select data_inicio from challenge_config where id = 1);
+  v_fim    := (select data_fim    from challenge_config where id = 1);
+
+  -- Pre-desafio ou pos-desafio: zero pontos (aquecimento / fora do periodo).
+  if p_data < v_inicio or p_data > v_fim then
+    return 0;
+  end if;
+
   if p_categoria = 'energia' then
     return coalesce(p_qtd, 0);
   end if;
 
-  v_inicio := (select data_inicio from challenge_config where id = 1);
   v_semana := ((p_data - v_inicio) / 7) + 1;
 
   v_meta_mov := case v_semana when 1 then 20 when 2 then 25 when 3 then 30 else 9999 end;

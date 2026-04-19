@@ -59,6 +59,14 @@ create table if not exists posts (
 create index if not exists idx_posts_user_data on posts (user_id, data_registro);
 create index if not exists idx_posts_status on posts (status);
 
+create table if not exists email_exceptions (
+  email text primary key,
+  nome_exibicao text,
+  observacao text,
+  criado_por uuid references profiles(id),
+  created_at timestamptz default now()
+);
+
 create table if not exists challenge_config (
   id smallint primary key default 1 check (id = 1),
   data_inicio date not null,
@@ -68,6 +76,21 @@ create table if not exists challenge_config (
 insert into challenge_config (id, data_inicio, data_fim)
 values (1, '2026-04-20', '2026-05-10')
 on conflict (id) do nothing;
+
+-- =====================================================
+-- Função: email é permitido a logar?
+-- =====================================================
+create or replace function public.email_allowed(p_email text)
+returns boolean
+language sql
+stable
+as $$
+  select
+    lower(p_email) like '%@tributodevido.com.br'
+    or exists (select 1 from email_exceptions where lower(email) = lower(p_email));
+$$;
+
+grant execute on function public.email_allowed(text) to anon, authenticated;
 
 -- =====================================================
 -- 2. Função de pontuação

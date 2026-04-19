@@ -16,6 +16,7 @@ export default function Admin() {
           ['fila', 'Fila de aprovação'],
           ['usuarios', 'Usuários'],
           ['grupos', 'Grupos'],
+          ['excecoes', 'Exceções'],
           ['aprovados', 'Posts aprovados'],
         ].map(([k, l]) => (
           <button
@@ -36,7 +37,82 @@ export default function Admin() {
       {aba === 'fila' && <Fila />}
       {aba === 'usuarios' && <Usuarios />}
       {aba === 'grupos' && <Grupos />}
+      {aba === 'excecoes' && <Excecoes />}
       {aba === 'aprovados' && <Aprovados />}
+    </div>
+  );
+}
+
+function Excecoes() {
+  const { profile: me } = useAuth();
+  const [lista, setLista] = useState([]);
+  const [novoEmail, setNovoEmail] = useState('');
+  const [novoNome, setNovoNome] = useState('');
+  const [novaObs, setNovaObs] = useState('');
+  const [erro, setErro] = useState(null);
+
+  const carregar = () => {
+    supabase.from('email_exceptions').select('*').order('created_at', { ascending: false })
+      .then(({ data }) => setLista(data || []));
+  };
+  useEffect(carregar, []);
+
+  const adicionar = async (e) => {
+    e.preventDefault();
+    setErro(null);
+    const email = novoEmail.trim().toLowerCase();
+    if (!email || !email.includes('@')) { setErro('E-mail inválido'); return; }
+    const { error } = await supabase.from('email_exceptions').insert({
+      email, nome_exibicao: novoNome.trim() || null, observacao: novaObs.trim() || null, criado_por: me.id,
+    });
+    if (error) { setErro(error.message); return; }
+    setNovoEmail(''); setNovoNome(''); setNovaObs('');
+    carregar();
+  };
+
+  const remover = async (email) => {
+    if (!confirm(`Remover acesso de ${email}?`)) return;
+    await supabase.from('email_exceptions').delete().eq('email', email);
+    carregar();
+  };
+
+  return (
+    <div>
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="label" style={{ marginBottom: 8 }}>Permitir acesso de e-mail externo</div>
+        <div style={{ fontSize: 12, color: 'var(--branco-70)', marginBottom: 14 }}>
+          Use pra convidar pessoas sem e-mail <strong>@tributodevido.com.br</strong> (ex: Dr. Fabrício Assini, consultores).
+          Após cadastrar, a pessoa pode logar com Google. Depois do primeiro login, vai em <strong>Usuários</strong> e atribui o grupo.
+        </div>
+        <form onSubmit={adicionar} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 10 }}>
+          <input className="input" type="email" placeholder="email@externo.com" value={novoEmail} onChange={e => setNovoEmail(e.target.value)} required />
+          <input className="input" placeholder="Nome (opcional)" value={novoNome} onChange={e => setNovoNome(e.target.value)} />
+          <input className="input" placeholder="Observação (opcional)" value={novaObs} onChange={e => setNovaObs(e.target.value)} />
+          <button type="submit" className="btn btn-primary">+ Adicionar</button>
+        </form>
+        {erro && <div style={{ marginTop: 10, color: 'var(--vermelho)', fontSize: 12 }}>{erro}</div>}
+      </div>
+
+      <div className="card">
+        <div className="label" style={{ marginBottom: 10 }}>Exceções cadastradas ({lista.length})</div>
+        {lista.length === 0 && <div style={{ color: 'var(--branco-45)', fontSize: 12 }}>Nenhuma exceção.</div>}
+        {lista.map(x => (
+          <div key={x.email} style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '10px 0',
+            borderTop: '1px solid rgba(255,255,255,0.05)',
+          }}>
+            <div>
+              <div style={{ fontSize: 14 }}>
+                <strong>{x.email}</strong>
+                {x.nome_exibicao && <span style={{ color: 'var(--branco-70)', marginLeft: 8 }}>· {x.nome_exibicao}</span>}
+              </div>
+              {x.observacao && <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 2 }}>{x.observacao}</div>}
+            </div>
+            <button className="btn btn-ghost" onClick={() => remover(x.email)} style={{ fontSize: 10, padding: '4px 10px' }}>Remover</button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

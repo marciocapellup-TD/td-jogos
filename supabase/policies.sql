@@ -71,6 +71,17 @@ drop policy if exists "groups_admin_update" on groups;
 create policy "groups_admin_update" on groups for update using (public.is_admin());
 
 -- =====================================================
+-- email_exceptions (leitura pública pra validar login; escrita só admin)
+-- =====================================================
+alter table email_exceptions enable row level security;
+
+drop policy if exists "exc_read_all" on email_exceptions;
+create policy "exc_read_all" on email_exceptions for select using (true);
+
+drop policy if exists "exc_admin_all" on email_exceptions;
+create policy "exc_admin_all" on email_exceptions for all using (public.is_admin());
+
+-- =====================================================
 -- challenge_config (leitura pública)
 -- =====================================================
 alter table challenge_config enable row level security;

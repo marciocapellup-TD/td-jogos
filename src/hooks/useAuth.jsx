@@ -4,6 +4,14 @@ import { supabase } from '../lib/supabase';
 const Ctx = createContext(null);
 const DOMINIO_PERMITIDO = 'tributodevido.com.br';
 
+async function emailPermitido(email) {
+  if (!email) return false;
+  if (email.toLowerCase().endsWith(`@${DOMINIO_PERMITIDO}`)) return true;
+  // Consulta whitelist (admin pode cadastrar emails externos tipo Dr. Fabricio)
+  const { data } = await supabase.rpc('email_allowed', { p_email: email });
+  return data === true;
+}
+
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -31,11 +39,14 @@ export function AuthProvider({ children }) {
     })();
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (_e, s) => {
-      if (s?.user?.email && !s.user.email.toLowerCase().endsWith(`@${DOMINIO_PERMITIDO}`)) {
-        await supabase.auth.signOut();
-        setDominioBloqueado(true);
-        setSession(null);
-        return;
+      if (s?.user?.email) {
+        const ok = await emailPermitido(s.user.email);
+        if (!ok) {
+          await supabase.auth.signOut();
+          setDominioBloqueado(true);
+          setSession(null);
+          return;
+        }
       }
       setSession(s);
     });

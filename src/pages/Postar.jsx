@@ -36,9 +36,11 @@ export default function Postar() {
 
   const frutasHoje = postsHoje.reduce((a, p) => a + (p.quantidade_frutas || 0), 0);
   const jaPostouMovMental = categoria !== 'energia' && postsHoje.length > 0;
+  // Permite postar no aquecimento (pré-desafio) — pontos só contam a partir de 20/04.
+  // Só bloqueia depois que o desafio encerra.
   const bloqueado = (categoria === 'energia' && frutasHoje + Number(quantidadeFrutas) > 2)
                  || jaPostouMovMental
-                 || semana === 0 || semana > 3;
+                 || semana > 3;
 
   const pontosPreview = previewPontos(categoria, {
     minutos: Number(minutos) || 0,
@@ -76,7 +78,12 @@ export default function Postar() {
       <div className="label" style={{ color: cat.cor }}>{cat.emoji} {cat.label}</div>
       <h1 style={{ marginBottom: 18 }}>Novo registro</h1>
 
-      {semana === 0 && <AlertaBox>Desafio ainda não começou (inicia 20/04).</AlertaBox>}
+      {semana === 0 && (
+        <AlertaBox>
+          🔥 <strong>Modo aquecimento</strong> — desafio oficial começa 20/04.
+          Você pode postar agora mas os <strong>pontos só contam a partir de segunda</strong>.
+        </AlertaBox>
+      )}
       {semana > 3 && <AlertaBox>Desafio encerrado em 10/05.</AlertaBox>}
 
       <form onSubmit={enviar} className="card">

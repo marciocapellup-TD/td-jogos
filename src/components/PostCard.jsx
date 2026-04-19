@@ -22,7 +22,31 @@ export default function PostCard({ post, children }) {
       </div>
 
       {post.foto_url && (
-        <img src={post.foto_url} alt="" style={{ width: '100%', maxHeight: 320, objectFit: 'cover', borderRadius: 3 }} />
+        <img
+          src={post.foto_url}
+          alt=""
+          style={{ width: '100%', maxHeight: 320, objectFit: 'cover', borderRadius: 3 }}
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+            const placeholder = e.currentTarget.nextElementSibling;
+            if (placeholder) placeholder.style.display = 'flex';
+          }}
+        />
+      )}
+      {post.foto_url && (
+        <div style={{
+          display: 'none',
+          alignItems: 'center', justifyContent: 'center',
+          padding: '28px 16px',
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px dashed rgba(255,255,255,0.15)',
+          borderRadius: 3,
+          fontSize: 12, color: 'var(--branco-45)',
+          flexDirection: 'column', gap: 6,
+        }}>
+          <div style={{ fontSize: 22 }}>🗑️</div>
+          <div>Foto removida para liberar espaço</div>
+        </div>
       )}
 
       <div style={{ fontSize: 12, color: 'var(--branco-70)' }}>

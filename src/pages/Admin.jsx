@@ -417,9 +417,27 @@ function Aprovados() {
   };
   useEffect(carregar, []);
 
+  // Extrai o path do arquivo no bucket a partir da URL pública
+  const extractStoragePath = (url) => {
+    if (!url) return null;
+    const m = url.match(/\/storage\/v1\/object\/public\/postagens\/(.+)$/);
+    return m ? decodeURIComponent(m[1]) : null;
+  };
+
   const excluir = async (p) => {
-    if (!confirm('Excluir esta postagem aprovada? Os pontos também serão removidos.')) return;
+    if (!confirm('Excluir esta postagem? Pontos e foto serão removidos (irreversível).')) return;
+    const path = extractStoragePath(p.foto_url);
+    if (path) await supabase.storage.from('postagens').remove([path]);
     await supabase.from('posts').delete().eq('id', p.id);
+    carregar();
+  };
+
+  const liberarFoto = async (p) => {
+    if (!confirm('Apagar só a foto do armazenamento? O post e os pontos continuam preservados.\n\nÚtil quando o Storage está cheio.')) return;
+    const path = extractStoragePath(p.foto_url);
+    if (!path) { alert('URL da foto não parece ser do bucket postagens.'); return; }
+    const { error } = await supabase.storage.from('postagens').remove([path]);
+    if (error) { alert('Erro ao apagar foto: ' + error.message); return; }
     carregar();
   };
 
@@ -500,9 +518,24 @@ function Aprovados() {
         <div className="grid-cards">
           {filtrados.map(p => (
             <PostCard key={p.id} post={p}>
-              <button className="btn btn-danger" style={{ fontSize: 10, padding: '6px 10px' }} onClick={() => excluir(p)}>
-                Excluir
-              </button>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: 10, padding: '6px 10px' }}
+                  onClick={() => liberarFoto(p)}
+                  title="Remove só a foto, mantém post e pontos"
+                >
+                  📷 Liberar foto
+                </button>
+                <button
+                  className="btn btn-danger"
+                  style={{ fontSize: 10, padding: '6px 10px' }}
+                  onClick={() => excluir(p)}
+                  title="Remove tudo: post, foto e pontos"
+                >
+                  Excluir tudo
+                </button>
+              </div>
             </PostCard>
           ))}
         </div>

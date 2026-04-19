@@ -3,12 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Login() {
-  const { session, signIn, loading } = useAuth();
+  const { session, signIn, loading, dominioBloqueado, limparDominioBloqueado } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!loading && session) navigate('/', { replace: true });
   }, [session, loading, navigate]);
+
+  const handleSignIn = () => {
+    if (dominioBloqueado) limparDominioBloqueado();
+    signIn();
+  };
 
   return (
     <div style={{
@@ -48,7 +53,22 @@ export default function Login() {
           Entre com seu e-mail <strong style={{ color: 'var(--amarelo)' }}>@tributodevido.com.br</strong>.
         </p>
 
-        <button className="btn btn-primary" style={{ width: '100%' }} onClick={signIn}>
+        {dominioBloqueado && (
+          <div style={{
+            background: 'rgba(192,57,43,0.15)',
+            border: '1px solid rgba(192,57,43,0.4)',
+            borderLeft: '3px solid var(--vermelho)',
+            padding: '10px 14px',
+            borderRadius: 3,
+            marginBottom: 16,
+            fontSize: 12,
+            textAlign: 'left',
+          }}>
+            Acesso restrito a emails <strong>@tributodevido.com.br</strong>. Você foi desconectado — tente de novo com sua conta corporativa.
+          </div>
+        )}
+
+        <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleSignIn}>
           Entrar com Google
         </button>
 

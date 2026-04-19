@@ -9,5 +9,18 @@ if (!url || !anon) {
 }
 
 export const supabase = createClient(url, anon, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'implicit',
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+  },
 });
+
+if (typeof window !== 'undefined' && import.meta.env.DEV) {
+  window.supabase = supabase;
+  supabase.auth.onAuthStateChange((event, session) => {
+    console.log('[auth]', event, session ? `user=${session.user.email}` : 'no session');
+  });
+}

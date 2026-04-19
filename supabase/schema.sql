@@ -1,6 +1,8 @@
 -- TD Jogos — schema
 -- Rodar no Supabase SQL Editor no projeto novo.
 
+create extension if not exists unaccent;
+
 -- =====================================================
 -- 1. Tabelas
 -- =====================================================
@@ -80,25 +82,25 @@ create or replace function calcular_pontos(
 language plpgsql
 as $$
 declare
-  semana int;
-  meta_mov int;
-  meta_men int;
+  v_inicio date;
+  v_semana int;
+  v_meta_mov int;
+  v_meta_men int;
 begin
-  select (p_data - data_inicio)/7 + 1
-    into semana
-    from challenge_config where id = 1;
-
   if p_categoria = 'energia' then
     return coalesce(p_qtd, 0);
   end if;
 
-  meta_mov := case semana when 1 then 20 when 2 then 25 when 3 then 30 else 9999 end;
-  meta_men := case semana when 1 then 3  when 2 then 4  when 3 then 5  else 9999 end;
+  v_inicio := (select data_inicio from challenge_config where id = 1);
+  v_semana := ((p_data - v_inicio) / 7) + 1;
 
-  if p_categoria = 'movimento' and coalesce(p_minutos,0) >= meta_mov then
+  v_meta_mov := case v_semana when 1 then 20 when 2 then 25 when 3 then 30 else 9999 end;
+  v_meta_men := case v_semana when 1 then 3  when 2 then 4  when 3 then 5  else 9999 end;
+
+  if p_categoria = 'movimento' and coalesce(p_minutos,0) >= v_meta_mov then
     return 3;
   end if;
-  if p_categoria = 'mental' and coalesce(p_minutos,0) >= meta_men then
+  if p_categoria = 'mental' and coalesce(p_minutos,0) >= v_meta_men then
     return 2;
   end if;
 
@@ -115,29 +117,29 @@ returns trigger
 language plpgsql
 as $$
 declare
-  soma_frutas int;
-  ja_tem int;
+  v_soma int;
+  v_ja_tem int;
 begin
   if NEW.categoria = 'energia' then
-    select coalesce(sum(quantidade_frutas),0)
-      into soma_frutas
-      from posts
+    v_soma := coalesce((
+      select sum(quantidade_frutas) from posts
       where user_id = NEW.user_id
         and data_registro = NEW.data_registro
         and categoria = 'energia'
-        and status in ('pending','approved');
-    if soma_frutas + coalesce(NEW.quantidade_frutas,0) > 2 then
+        and status in ('pending','approved')
+    ), 0);
+    if v_soma + coalesce(NEW.quantidade_frutas,0) > 2 then
       raise exception 'Limite de 2 frutas por dia excedido.';
     end if;
   else
-    select count(*)
-      into ja_tem
-      from posts
+    v_ja_tem := (
+      select count(*) from posts
       where user_id = NEW.user_id
         and data_registro = NEW.data_registro
         and categoria = NEW.categoria
-        and status in ('pending','approved');
-    if ja_tem > 0 then
+        and status in ('pending','approved')
+    );
+    if v_ja_tem > 0 then
       raise exception 'Você já registrou % hoje.', NEW.categoria;
     end if;
   end if;
@@ -185,51 +187,53 @@ security definer
 set search_path = public
 as $$
 declare
-  v_claim pending_claims%rowtype;
+  v_claim_id int;
   v_uid uuid := auth.uid();
-  v_normalized text := lower(unaccent(coalesce(p_nome,'')));
+  v_normalized text := lower(public.unaccent(coalesce(p_nome,'')));
 begin
   if v_uid is null then
     raise exception 'sem sessao';
   end if;
 
-  -- já tem profile
   if exists (select 1 from profiles where id = v_uid) then
     return v_uid;
   end if;
 
-  -- tenta match por email
-  select * into v_claim from pending_claims
+  -- match por email
+  v_claim_id := (
+    select id from pending_claims
     where claimed_by is null
       and email is not null
       and lower(email) = lower(p_email)
-    limit 1;
+    limit 1
+  );
 
   -- fallback por nome normalizado
-  if v_claim.id is null then
-    select * into v_claim from pending_claims
+  if v_claim_id is null then
+    v_claim_id := (
+      select id from pending_claims
       where claimed_by is null
-        and lower(unaccent(nome_exibicao)) = v_normalized
-      limit 1;
+        and lower(public.unaccent(nome_exibicao)) = v_normalized
+      limit 1
+    );
   end if;
 
-  if v_claim.id is null then
-    -- sem match: cria profile mínimo desvinculado de grupo; admin vai vincular depois
+  if v_claim_id is null then
     insert into profiles (id, nome_exibicao, email, role)
       values (v_uid, coalesce(p_nome, p_email), p_email, 'user');
     return v_uid;
   end if;
 
   insert into profiles (id, nome_exibicao, email, group_id, role)
-    values (v_uid, v_claim.nome_exibicao, p_email, v_claim.group_id, v_claim.role);
+    select v_uid, nome_exibicao, p_email, group_id, role
+    from pending_claims
+    where id = v_claim_id;
 
   update pending_claims
     set claimed_by = v_uid, claimed_at = now()
-    where id = v_claim.id;
+    where id = v_claim_id;
 
   return v_uid;
 end;
 $$;
 
--- unaccent extension (ignorar erro se não tiver permissão)
-create extension if not exists unaccent;

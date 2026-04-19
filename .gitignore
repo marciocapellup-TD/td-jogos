@@ -12,6 +12,13 @@ dist
 dist-ssr
 *.local
 
+# Nunca versionar nenhum .env — credenciais vão direto pro Vercel dashboard
+.env
+.env.*
+!.env.*.example
+.env.txt
+.vercel/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

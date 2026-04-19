@@ -2,18 +2,43 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 const Ctx = createContext(null);
+const DOMINIO_PERMITIDO = 'tributodevido.com.br';
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [dominioBloqueado, setDominioBloqueado] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    (async () => {
+      // Fallback manual: se detectSessionInUrl não processou, parse o hash aqui.
+      if (window.location.hash.includes('access_token=')) {
+        const params = new URLSearchParams(window.location.hash.substring(1));
+        const access_token = params.get('access_token');
+        const refresh_token = params.get('refresh_token');
+        if (access_token && refresh_token) {
+          const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+          if (error) console.error('[auth] setSession erro:', error);
+          // limpa o hash da URL
+          window.history.replaceState({}, '', window.location.pathname + window.location.search);
+        }
+      }
+
+      const { data } = await supabase.auth.getSession();
       setSession(data.session);
       setLoading(false);
+    })();
+
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_e, s) => {
+      if (s?.user?.email && !s.user.email.toLowerCase().endsWith(`@${DOMINIO_PERMITIDO}`)) {
+        await supabase.auth.signOut();
+        setDominioBloqueado(true);
+        setSession(null);
+        return;
+      }
+      setSession(s);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -51,7 +76,17 @@ export function AuthProvider({ children }) {
   const signOut = () => supabase.auth.signOut();
 
   return (
-    <Ctx.Provider value={{ session, profile, loading, signIn, signOut, isAdmin: ['admin','superadmin'].includes(profile?.role), isSuperAdmin: profile?.role === 'superadmin' }}>
+    <Ctx.Provider value={{
+      session,
+      profile,
+      loading,
+      signIn,
+      signOut,
+      isAdmin: ['admin','superadmin'].includes(profile?.role),
+      isSuperAdmin: profile?.role === 'superadmin',
+      dominioBloqueado,
+      limparDominioBloqueado: () => setDominioBloqueado(false),
+    }}>
       {children}
     </Ctx.Provider>
   );

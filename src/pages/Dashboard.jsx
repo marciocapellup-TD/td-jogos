@@ -34,7 +34,7 @@ export default function Dashboard() {
     })();
   }, []);
 
-  const { rankingGrupos, rankingIndiv, porCategoria, serieTemporal, maisAtivos } = useMemo(() => {
+  const { rankingGrupos, rankingIndiv, rankingIndivFull, porCategoria, serieTemporal, maisAtivos } = useMemo(() => {
     const { posts, profiles, groups } = data;
     const prefById = Object.fromEntries(profiles.map(p => [p.id, p]));
 
@@ -64,14 +64,19 @@ export default function Dashboard() {
       pontos: somaGrp[g.id] || 0,
     })).sort((a, b) => b.pontos - a.pontos);
 
-    const rankingIndiv = Object.entries(somaUser)
-      .map(([uid, pts]) => {
-        const p = prefById[uid];
-        const g = groups.find(gg => gg.id === p?.group_id);
-        return { id: uid, nome: p?.nome_exibicao || '—', grupo: g?.nome, cor: g?.cor, pontos: pts };
-      })
-      .sort((a, b) => b.pontos - a.pontos)
-      .slice(0, 10);
+    const rankingIndivFull = profiles.map(p => {
+      const g = groups.find(gg => gg.id === p.group_id);
+      return {
+        id: p.id,
+        nome: p.nome_exibicao,
+        grupo: g?.nome,
+        group_id: p.group_id,
+        cor: g?.cor,
+        pontos: somaUser[p.id] || 0,
+      };
+    }).sort((a, b) => b.pontos - a.pontos);
+
+    const rankingIndiv = rankingIndivFull.slice(0, 10);
 
     const porCategoria = groups.map(g => ({
       grupo: g.nome,
@@ -101,7 +106,7 @@ export default function Dashboard() {
       }
     }
 
-    return { rankingGrupos, rankingIndiv, porCategoria, serieTemporal, maisAtivos };
+    return { rankingGrupos, rankingIndiv, rankingIndivFull, porCategoria, serieTemporal, maisAtivos };
   }, [data]);
 
   if (loading) return <div style={{ color: 'var(--branco-45)' }}>Carregando...</div>;
@@ -123,11 +128,17 @@ export default function Dashboard() {
         <StatCard label="Grupo líder" value={rankingGrupos[0]?.nome || '—'} cor={rankingGrupos[0]?.cor} sub={`${rankingGrupos[0]?.pontos || 0} pts`} />
       </div>
 
-      {/* Ranking grupos */}
+      {/* Ranking grupos — expansível */}
       <h3 style={{ marginBottom: 12 }}>Ranking dos grupos</h3>
       <div className="card" style={{ marginBottom: 26 }}>
         {rankingGrupos.map((g, i) => (
-          <RankingBar key={g.id} nome={g.nome} pontos={g.pontos} max={maxGrupo} cor={g.cor} posicao={i + 1} />
+          <GrupoExpandido
+            key={g.id}
+            grupo={g}
+            posicao={i + 1}
+            max={maxGrupo}
+            membros={rankingIndivFull.filter(r => r.group_id === g.id)}
+          />
         ))}
       </div>
 
@@ -195,6 +206,70 @@ export default function Dashboard() {
           <RankingBar key={r.id} nome={`${r.nome} · ${r.grupo}`} pontos={r.pontos} max={maxIndiv} cor={r.cor} posicao={i + 1} />
         ))}
       </div>
+    </div>
+  );
+}
+
+function GrupoExpandido({ grupo, posicao, max, membros }) {
+  const [aberto, setAberto] = useState(false);
+  const membrosOrdenados = [...membros].sort((a, b) => b.pontos - a.pontos);
+
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div
+        onClick={() => setAberto(!aberto)}
+        style={{ cursor: 'pointer', userSelect: 'none' }}
+      >
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+          marginBottom: 4, fontFamily: 'Rajdhani, sans-serif',
+        }}>
+          <span style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 600 }}>
+            <span style={{
+              display: 'inline-block', width: 14, textAlign: 'center',
+              color: 'var(--amarelo)', marginRight: 6,
+              transition: 'transform 0.2s',
+              transform: aberto ? 'rotate(90deg)' : 'rotate(0deg)',
+            }}>▶</span>
+            <span style={{ color: 'var(--amarelo)', marginRight: 8 }}>#{posicao}</span>
+            {grupo.nome}
+            <span style={{ color: 'var(--branco-45)', fontSize: 10, marginLeft: 8, letterSpacing: 1 }}>
+              · {membros.length} {membros.length === 1 ? 'membro' : 'membros'}
+            </span>
+          </span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--amarelo)' }}>{grupo.pontos} pts</span>
+        </div>
+        <div style={{ height: 10, background: 'rgba(255,255,255,0.07)', borderRadius: 2, overflow: 'hidden' }}>
+          <div style={{
+            width: `${Math.min(100, max > 0 ? (grupo.pontos / max) * 100 : 0)}%`,
+            height: '100%', background: grupo.cor || 'var(--amarelo)',
+            transition: 'width 0.6s ease',
+          }} />
+        </div>
+      </div>
+
+      {aberto && (
+        <div style={{
+          marginTop: 10,
+          marginLeft: 20,
+          paddingLeft: 14,
+          borderLeft: `2px solid ${grupo.cor}`,
+        }}>
+          {membrosOrdenados.length === 0 && (
+            <div style={{ color: 'var(--branco-45)', fontSize: 11 }}>Sem membros cadastrados ainda.</div>
+          )}
+          {membrosOrdenados.map((m, i) => (
+            <div key={m.id} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '6px 0', fontSize: 12,
+              borderBottom: i < membrosOrdenados.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+            }}>
+              <span><span style={{ color: 'var(--branco-45)', marginRight: 8 }}>{i + 1}.</span>{m.nome}</span>
+              <span style={{ color: 'var(--amarelo)', fontFamily: 'Rajdhani', fontWeight: 700 }}>{m.pontos} pts</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

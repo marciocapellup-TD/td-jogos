@@ -145,6 +145,12 @@ export default function Postar() {
 
         {erro && <div style={{ color: 'var(--vermelho)', marginBottom: 10, fontSize: 12 }}>{erro}</div>}
 
+        {!fotoUrl && (
+          <div style={{ fontSize: 11, color: 'var(--branco-45)', marginBottom: 8, textAlign: 'center' }}>
+            ⬆ Anexe uma foto acima para habilitar o envio
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
           <button type="button" className="btn btn-ghost" onClick={() => navigate('/')}>Cancelar</button>
           <button

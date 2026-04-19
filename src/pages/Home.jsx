@@ -13,6 +13,7 @@ export default function Home() {
   const metas = metasDaSemana(semana);
   const [rankingGrupos, setRankingGrupos] = useState([]);
   const [meusPontos, setMeusPontos] = useState(0);
+  const [colegas, setColegas] = useState([]);
 
   useEffect(() => {
     (async () => {
@@ -29,13 +30,33 @@ export default function Home() {
         }
         setRankingGrupos(groups.map(g => ({ ...g, pontos: soma[g.id] || 0 })).sort((a, b) => b.pontos - a.pontos));
       }
+
       if (profile?.id) {
         const { data: meus } = await supabase.from('posts')
           .select('pontos').eq('user_id', profile.id).eq('status', 'approved');
         setMeusPontos((meus || []).reduce((a, x) => a + (x.pontos || 0), 0));
       }
+
+      // Colegas do mesmo grupo (profiles já cadastrados) + pending_claims (ainda não logaram)
+      if (profile?.group_id) {
+        const [prof, pend] = await Promise.all([
+          supabase.from('profiles')
+            .select('id, nome_exibicao, ativo')
+            .eq('group_id', profile.group_id)
+            .eq('ativo', true)
+            .order('nome_exibicao'),
+          supabase.from('pending_claims')
+            .select('id, nome_exibicao')
+            .eq('group_id', profile.group_id)
+            .is('claimed_by', null)
+            .order('nome_exibicao'),
+        ]);
+        const ativos = (prof.data || []).map(p => ({ nome: p.nome_exibicao, ativo: true, id: p.id }));
+        const pendentes = (pend.data || []).map(p => ({ nome: p.nome_exibicao, ativo: false, id: `pc-${p.id}` }));
+        setColegas([...ativos, ...pendentes]);
+      }
     })();
-  }, [profile?.id]);
+  }, [profile?.id, profile?.group_id]);
 
   const maxPontos = Math.max(1, ...rankingGrupos.map(g => g.pontos));
 
@@ -97,6 +118,47 @@ export default function Home() {
           </Link>
         ))}
       </div>
+
+      {/* Seu grupo */}
+      {profile?.groups && colegas.length > 0 && (
+        <>
+          <h3 style={{ marginBottom: 12 }}>Seu time — {profile.groups.nome}</h3>
+          <div className="card" style={{ borderTopColor: profile.groups.cor, marginBottom: 26 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+              {colegas.map(c => {
+                const souEu = c.id === profile.id;
+                return (
+                  <div key={c.id} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '8px 12px',
+                    background: souEu ? 'var(--amarelo-soft)' : 'rgba(255,255,255,0.03)',
+                    borderRadius: 3,
+                    borderLeft: `2px solid ${souEu ? 'var(--amarelo)' : profile.groups.cor}`,
+                  }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: '50%',
+                      background: profile.groups.cor,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: 'var(--azul)', fontWeight: 700, fontSize: 12,
+                      fontFamily: 'Rajdhani',
+                      opacity: c.ativo ? 1 : 0.5,
+                    }}>
+                      {c.nome.charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ fontSize: 13, color: c.ativo ? '#fff' : 'var(--branco-45)' }}>
+                      {c.nome}
+                      {souEu && <span style={{ color: 'var(--amarelo)', fontSize: 10, marginLeft: 6, letterSpacing: 1 }}>VOCÊ</span>}
+                      {!c.ativo && <div style={{ fontSize: 9, color: 'var(--branco-45)', letterSpacing: 1 }}>ainda não logou</div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Ranking grupos */}
       <h3 style={{ marginBottom: 12 }}>Placar dos grupos</h3>

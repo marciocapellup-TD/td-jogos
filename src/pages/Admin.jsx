@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import PostCard from '../components/PostCard';
+import { CATEGORIAS } from '../lib/scoring';
 
 export default function Admin() {
   const [aba, setAba] = useState('fila');
@@ -10,10 +11,11 @@ export default function Admin() {
       <div className="label">Administração</div>
       <h1 style={{ marginBottom: 18 }}>Painel admin</h1>
 
-      <div style={{ display: 'flex', gap: 4, marginBottom: 18, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 18, borderBottom: '1px solid rgba(255,255,255,0.08)', flexWrap: 'wrap' }}>
         {[
           ['fila', 'Fila de aprovação'],
           ['usuarios', 'Usuários'],
+          ['grupos', 'Grupos'],
           ['aprovados', 'Posts aprovados'],
         ].map(([k, l]) => (
           <button
@@ -33,6 +35,7 @@ export default function Admin() {
 
       {aba === 'fila' && <Fila />}
       {aba === 'usuarios' && <Usuarios />}
+      {aba === 'grupos' && <Grupos />}
       {aba === 'aprovados' && <Aprovados />}
     </div>
   );
@@ -139,7 +142,7 @@ function Usuarios() {
   };
 
   const mudarGrupo = async (u, gid) => {
-    await supabase.from('profiles').update({ group_id: Number(gid) }).eq('id', u.id);
+    await supabase.from('profiles').update({ group_id: gid ? Number(gid) : null }).eq('id', u.id);
     carregar();
   };
 
@@ -149,7 +152,7 @@ function Usuarios() {
   };
 
   return (
-    <div className="card">
+    <div className="card" style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr style={{ textAlign: 'left', color: 'var(--amarelo)', fontFamily: 'Rajdhani', letterSpacing: 1.5, textTransform: 'uppercase', fontSize: 11 }}>
@@ -161,37 +164,161 @@ function Usuarios() {
           </tr>
         </thead>
         <tbody>
-          {users.map(u => (
-            <tr key={u.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-              <td style={{ padding: 8 }}>{u.nome_exibicao}<br /><span style={{ color: 'var(--branco-45)', fontSize: 11 }}>{u.email}</span></td>
-              <td style={{ padding: 8 }}>
-                <select className="input" value={u.group_id || ''} onChange={e => mudarGrupo(u, e.target.value)}>
-                  <option value="">—</option>
-                  {groups.map(g => <option key={g.id} value={g.id}>{g.nome}</option>)}
-                </select>
-              </td>
-              <td style={{ padding: 8 }}>
-                <span className="badge" style={{ background: u.role === 'superadmin' ? 'var(--amarelo)' : u.role === 'admin' ? 'var(--azul-grupo)' : 'rgba(255,255,255,0.1)', color: u.role === 'user' ? '#fff' : 'var(--azul)' }}>{u.role}</span>
-              </td>
-              <td style={{ padding: 8 }}>{u.ativo ? '✓' : '✗'}</td>
-              <td style={{ padding: 8 }}>
-                {isSuperAdmin && u.role !== 'superadmin' && (
-                  <>
-                    {u.role === 'user'
-                      ? <button className="btn btn-ghost btn-sm" onClick={() => promover(u, 'admin')} style={{ padding: '4px 8px', fontSize: 10 }}>→ Admin</button>
-                      : <button className="btn btn-ghost btn-sm" onClick={() => promover(u, 'user')} style={{ padding: '4px 8px', fontSize: 10 }}>→ User</button>}
-                  </>
-                )}
-                {u.id !== me.id && (
-                  <button className="btn btn-ghost btn-sm" onClick={() => toggleAtivo(u)} style={{ padding: '4px 8px', fontSize: 10, marginLeft: 4 }}>
-                    {u.ativo ? 'Desativar' : 'Ativar'}
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
+          {users.map(u => {
+            const ehVoce = u.id === me.id;
+            const podePromover = isSuperAdmin && u.role !== 'superadmin';
+            return (
+              <tr key={u.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                <td style={{ padding: 8 }}>
+                  {u.nome_exibicao}
+                  {ehVoce && <span style={{ color: 'var(--amarelo)', fontSize: 10, marginLeft: 6, letterSpacing: 1 }}>VOCÊ</span>}
+                  <br />
+                  <span style={{ color: 'var(--branco-45)', fontSize: 11 }}>{u.email}</span>
+                </td>
+                <td style={{ padding: 8 }}>
+                  <select className="input" value={u.group_id || ''} onChange={e => mudarGrupo(u, e.target.value)}>
+                    <option value="">—</option>
+                    {groups.map(g => <option key={g.id} value={g.id}>{g.nome}</option>)}
+                  </select>
+                </td>
+                <td style={{ padding: 8 }}>
+                  <span className="badge" style={{
+                    background: u.role === 'superadmin' ? 'var(--amarelo)' : u.role === 'admin' ? 'var(--azul-grupo)' : 'rgba(255,255,255,0.1)',
+                    color: u.role === 'user' ? '#fff' : 'var(--azul)'
+                  }}>{u.role}</span>
+                </td>
+                <td style={{ padding: 8 }}>{u.ativo ? '✓' : '✗'}</td>
+                <td style={{ padding: 8 }}>
+                  {ehVoce ? (
+                    <span style={{ color: 'var(--branco-45)', fontSize: 11, fontStyle: 'italic' }}>você mesmo</span>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {podePromover && (u.role === 'user'
+                        ? <button className="btn btn-ghost" onClick={() => promover(u, 'admin')} style={{ padding: '4px 8px', fontSize: 10 }}>→ Admin</button>
+                        : <button className="btn btn-ghost" onClick={() => promover(u, 'user')} style={{ padding: '4px 8px', fontSize: 10 }}>→ User</button>
+                      )}
+                      <button className="btn btn-ghost" onClick={() => toggleAtivo(u)} style={{ padding: '4px 8px', fontSize: 10 }}>
+                        {u.ativo ? 'Desativar' : 'Ativar'}
+                      </button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function Grupos() {
+  const [groups, setGroups] = useState([]);
+  const [editando, setEditando] = useState(null);
+  const [nomeTemp, setNomeTemp] = useState('');
+  const [corTemp, setCorTemp] = useState('');
+  const [salvando, setSalvando] = useState(false);
+
+  const carregar = () => {
+    supabase.from('groups').select('*').order('id')
+      .then(({ data }) => setGroups(data || []));
+  };
+  useEffect(carregar, []);
+
+  const iniciarEdicao = (g) => {
+    setEditando(g.id);
+    setNomeTemp(g.nome);
+    setCorTemp(g.cor);
+  };
+
+  const cancelar = () => {
+    setEditando(null);
+    setNomeTemp('');
+    setCorTemp('');
+  };
+
+  const salvar = async () => {
+    if (!nomeTemp.trim()) { alert('Nome obrigatório'); return; }
+    setSalvando(true);
+    await supabase.from('groups')
+      .update({ nome: nomeTemp.trim(), cor: corTemp || '#F4CC04' })
+      .eq('id', editando);
+    setSalvando(false);
+    setEditando(null);
+    carregar();
+  };
+
+  return (
+    <div className="card">
+      <div style={{ fontSize: 12, color: 'var(--branco-70)', marginBottom: 14 }}>
+        Alterações refletem imediatamente em todo o app (rankings, dashboards, home).
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+        {groups.map(g => (
+          <div key={g.id} style={{
+            background: 'rgba(255,255,255,0.03)',
+            borderLeft: `4px solid ${g.cor}`,
+            padding: '14px 16px',
+            borderRadius: 3,
+          }}>
+            {editando === g.id ? (
+              <div>
+                <div className="form-group" style={{ marginBottom: 10 }}>
+                  <label>Nome do grupo</label>
+                  <input
+                    className="input"
+                    value={nomeTemp}
+                    onChange={e => setNomeTemp(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 10 }}>
+                  <label>Cor</label>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      type="color"
+                      value={corTemp}
+                      onChange={e => setCorTemp(e.target.value)}
+                      style={{ width: 40, height: 32, border: 'none', borderRadius: 3, background: 'transparent' }}
+                    />
+                    <input
+                      className="input"
+                      value={corTemp}
+                      onChange={e => setCorTemp(e.target.value)}
+                      placeholder="#F4CC04"
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button className="btn btn-ghost" onClick={cancelar} style={{ flex: 1, fontSize: 10 }}>Cancelar</button>
+                  <button className="btn btn-primary" onClick={salvar} disabled={salvando} style={{ flex: 1, fontSize: 10 }}>
+                    {salvando ? 'Salvando...' : 'Salvar'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div className="label" style={{ color: g.cor }}>Grupo · ID {g.id}</div>
+                    <div style={{ fontFamily: 'Rajdhani', fontSize: 18, fontWeight: 700, marginTop: 2 }}>
+                      {g.nome}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 2 }}>
+                      Cor: <span style={{ color: g.cor, fontWeight: 600 }}>{g.cor}</span>
+                    </div>
+                  </div>
+                  <button className="btn btn-ghost" onClick={() => iniciarEdicao(g)} style={{ fontSize: 10, padding: '6px 10px' }}>
+                    Editar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -199,46 +326,111 @@ function Usuarios() {
 function Aprovados() {
   const [posts, setPosts] = useState([]);
   const [busca, setBusca] = useState('');
+  const [filtroCategoria, setFiltroCategoria] = useState('');
+  const [filtroGrupo, setFiltroGrupo] = useState('');
+  const [filtroPessoa, setFiltroPessoa] = useState('');
+  const [groups, setGroups] = useState([]);
 
   const carregar = () => {
     supabase.from('posts')
-      .select('*, profiles!posts_user_id_fkey(nome_exibicao, groups(nome, cor))')
+      .select('*, profiles!posts_user_id_fkey(id, nome_exibicao, group_id, groups(nome, cor))')
       .eq('status', 'approved')
       .order('created_at', { ascending: false })
       .then(({ data }) => setPosts(data || []));
+    supabase.from('groups').select('*').order('id').then(({ data }) => setGroups(data || []));
   };
   useEffect(carregar, []);
 
   const excluir = async (p) => {
-    if (!confirm('Excluir esta postagem aprovada?')) return;
+    if (!confirm('Excluir esta postagem aprovada? Os pontos também serão removidos.')) return;
     await supabase.from('posts').delete().eq('id', p.id);
     carregar();
   };
 
-  const filtrados = posts.filter(p => {
-    const q = busca.toLowerCase();
-    return !q || p.profiles?.nome_exibicao?.toLowerCase().includes(q)
-      || p.categoria.includes(q);
-  });
+  // lista única de pessoas com posts aprovados (ordenada)
+  const pessoas = useMemo(() => {
+    const map = new Map();
+    for (const p of posts) {
+      const pid = p.profiles?.id;
+      if (pid) map.set(pid, p.profiles.nome_exibicao);
+    }
+    return Array.from(map.entries())
+      .map(([id, nome]) => ({ id, nome }))
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [posts]);
+
+  const filtrados = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    return posts.filter(p => {
+      if (filtroCategoria && p.categoria !== filtroCategoria) return false;
+      if (filtroGrupo && String(p.profiles?.group_id) !== filtroGrupo) return false;
+      if (filtroPessoa && p.profiles?.id !== filtroPessoa) return false;
+      if (q && !p.profiles?.nome_exibicao?.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [posts, busca, filtroCategoria, filtroGrupo, filtroPessoa]);
+
+  const limparFiltros = () => {
+    setBusca(''); setFiltroCategoria(''); setFiltroGrupo(''); setFiltroPessoa('');
+  };
+
+  const temFiltro = busca || filtroCategoria || filtroGrupo || filtroPessoa;
 
   return (
     <div>
-      <input
-        className="input"
-        value={busca}
-        onChange={e => setBusca(e.target.value)}
-        placeholder="Buscar por nome ou categoria..."
-        style={{ marginBottom: 14 }}
-      />
-      <div className="grid-cards">
-        {filtrados.map(p => (
-          <PostCard key={p.id} post={p}>
-            <button className="btn btn-danger" style={{ fontSize: 10, padding: '6px 10px' }} onClick={() => excluir(p)}>
-              Excluir
+      {/* Barra de filtros */}
+      <div className="card" style={{ marginBottom: 16, borderTopColor: 'var(--amarelo)' }}>
+        <div className="label" style={{ marginBottom: 10 }}>Filtros</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+          <input
+            className="input"
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            placeholder="🔎 Buscar por nome..."
+          />
+          <select className="input" value={filtroCategoria} onChange={e => setFiltroCategoria(e.target.value)}>
+            <option value="">Todas categorias</option>
+            {Object.entries(CATEGORIAS).map(([k, c]) => (
+              <option key={k} value={k}>{c.emoji} {c.label}</option>
+            ))}
+          </select>
+          <select className="input" value={filtroGrupo} onChange={e => setFiltroGrupo(e.target.value)}>
+            <option value="">Todos grupos</option>
+            {groups.map(g => <option key={g.id} value={g.id}>{g.nome}</option>)}
+          </select>
+          <select className="input" value={filtroPessoa} onChange={e => setFiltroPessoa(e.target.value)}>
+            <option value="">Todas pessoas</option>
+            {pessoas.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+          </select>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, fontSize: 12 }}>
+          <div style={{ color: 'var(--branco-70)' }}>
+            <strong style={{ color: 'var(--amarelo)' }}>{filtrados.length}</strong> de {posts.length} {posts.length === 1 ? 'post' : 'posts'}
+          </div>
+          {temFiltro && (
+            <button className="btn btn-ghost" onClick={limparFiltros} style={{ fontSize: 10, padding: '4px 10px' }}>
+              Limpar filtros
             </button>
-          </PostCard>
-        ))}
+          )}
+        </div>
       </div>
+
+      {/* Resultados */}
+      {filtrados.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', color: 'var(--branco-45)' }}>
+          {posts.length === 0 ? 'Nenhum post aprovado ainda.' : 'Nenhum post bate com os filtros.'}
+        </div>
+      ) : (
+        <div className="grid-cards">
+          {filtrados.map(p => (
+            <PostCard key={p.id} post={p}>
+              <button className="btn btn-danger" style={{ fontSize: 10, padding: '6px 10px' }} onClick={() => excluir(p)}>
+                Excluir
+              </button>
+            </PostCard>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

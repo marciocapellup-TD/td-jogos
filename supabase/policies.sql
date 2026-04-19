@@ -67,6 +67,9 @@ alter table groups enable row level security;
 drop policy if exists "groups_read_all" on groups;
 create policy "groups_read_all" on groups for select using (true);
 
+drop policy if exists "groups_admin_update" on groups;
+create policy "groups_admin_update" on groups for update using (public.is_admin());
+
 -- =====================================================
 -- challenge_config (leitura pública)
 -- =====================================================

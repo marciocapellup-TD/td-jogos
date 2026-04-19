@@ -37,31 +37,22 @@ export default function Login() {
         textAlign: 'center',
         boxShadow: '0 18px 60px rgba(0,0,0,0.4)',
       }}>
-        {/* Logo TD estilizado */}
-        <div style={{ marginBottom: 18 }}>
-          <div style={{
-            width: 72, height: 72, margin: '0 auto',
-            background: 'linear-gradient(135deg, #F4CC04 0%, #FFD93A 100%)',
-            color: 'var(--azul)',
-            fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 30,
-            letterSpacing: 2,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            borderRadius: 8,
-            position: 'relative',
-            boxShadow: '0 6px 20px rgba(244,204,4,0.3)',
-          }}>
-            TD
-            <div style={{
-              position: 'absolute',
-              top: -2, left: -2, right: -2,
-              height: 3, background: 'var(--amarelo)',
-              borderRadius: '8px 8px 0 0',
-            }} />
-          </div>
+        {/* Logo TD oficial */}
+        <div style={{ marginBottom: 22 }}>
+          <img
+            src="/logo-td.jpg"
+            alt="Tributo Devido"
+            style={{
+              height: 54,
+              width: 'auto',
+              display: 'block',
+              margin: '0 auto',
+              borderRadius: 4,
+            }}
+          />
         </div>
 
-        <div className="label" style={{ letterSpacing: 4 }}>Tributo Devido</div>
-        <h1 style={{ marginTop: 8, marginBottom: 6, fontSize: 26 }}>Jogos Internos</h1>
+        <h1 style={{ marginTop: 0, marginBottom: 6, fontSize: 24 }}>Jogos Internos</h1>
         <div style={{
           fontFamily: 'Rajdhani, sans-serif',
           fontSize: 10, fontWeight: 600, letterSpacing: 3,

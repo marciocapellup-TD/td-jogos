@@ -12,9 +12,8 @@ export default function Header() {
     <header className="td-header">
       <div className="td-header-inner container">
         <div className="td-brand">
-          <div className="td-logo">TD</div>
+          <img src="/logo-td.jpg" alt="Tributo Devido" className="td-logo-img" />
           <div className="td-brand-text">
-            <span className="label" style={{ color: '#F4CC04' }}>Tributo Devido</span>
             <h2>Jogos Internos</h2>
           </div>
         </div>

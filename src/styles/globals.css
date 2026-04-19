@@ -1,0 +1,168 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --azul: #011F36;
+  --azul-medio: #012D50;
+  --azul-bg: #0f1e2d;
+  --azul-card: #0a2540;
+  --amarelo: #F4CC04;
+  --amarelo-dim: rgba(244, 204, 4, 0.5);
+  --amarelo-soft: rgba(244, 204, 4, 0.08);
+  --cinza-bg: #F2F4F6;
+  --cinza-borda: #D0D8E0;
+  --texto: #2C3E50;
+  --branco-70: rgba(255, 255, 255, 0.7);
+  --branco-45: rgba(255, 255, 255, 0.45);
+  --verde: #10B981;
+  --vermelho: #c0392b;
+  --violeta: #8B5CF6;
+  --laranja: #F97316;
+  --azul-grupo: #3B82F6;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { min-height: 100vh; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--azul-bg);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--amarelo); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: inherit;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: 14px;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+h1 { font-size: 22px; letter-spacing: 2px; }
+h2 { font-size: 16px; letter-spacing: 1.5px; }
+h3 { font-size: 13px; letter-spacing: 2px; color: var(--amarelo); }
+
+/* ============== utilitários ============== */
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+
+.grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+
+.label {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--amarelo);
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border-radius: 3px;
+}
+.badge-pending { background: var(--amarelo); color: var(--azul); }
+.badge-approved { background: var(--verde); color: #fff; }
+.badge-rejected { background: var(--vermelho); color: #fff; }
+
+/* ============== card padrão ============== */
+.card {
+  background: var(--azul-card);
+  border-top: 2px solid var(--amarelo);
+  border-radius: 4px;
+  padding: 18px 20px;
+  position: relative;
+}
+
+.card-neutro {
+  background: #fff;
+  color: var(--texto);
+  border-top: 2px solid var(--amarelo);
+  border-radius: 4px;
+  padding: 18px 20px;
+}
+
+/* ============== botão primário ============== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 22px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.btn-primary { background: var(--amarelo); color: var(--azul); }
+.btn-primary:hover { background: #ffdd33; transform: translateY(-1px); }
+.btn-ghost { background: transparent; color: var(--amarelo); border-color: var(--amarelo); }
+.btn-ghost:hover { background: var(--amarelo-soft); }
+.btn-danger { background: var(--vermelho); color: #fff; }
+.btn-success { background: var(--verde); color: #fff; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ============== input ============== */
+.input, textarea.input, select.input {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  color: #fff;
+  font-size: 14px;
+  transition: border 0.15s;
+}
+.input:focus { outline: none; border-color: var(--amarelo); }
+.input::placeholder { color: rgba(255, 255, 255, 0.3); }
+
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--amarelo);
+  margin-bottom: 6px;
+}
+
+/* ============== responsivo ============== */
+@media (max-width: 640px) {
+  .container { padding: 16px 14px; }
+  h1 { font-size: 18px; }
+}

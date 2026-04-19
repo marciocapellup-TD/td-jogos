@@ -30,7 +30,7 @@ export default function Login() {
       <div style={{
         maxWidth: 460,
         width: '100%',
-        background: 'var(--azul-card)',
+        background: 'var(--azul)',
         borderTop: '3px solid var(--amarelo)',
         borderRadius: 4,
         padding: '44px 36px 32px',
@@ -38,7 +38,7 @@ export default function Login() {
         boxShadow: '0 18px 60px rgba(0,0,0,0.4)',
       }}>
         {/* Logo TD oficial */}
-        <div style={{ marginBottom: 22 }}>
+        <div style={{ marginBottom: 24 }}>
           <img
             src="/logo-td.jpg"
             alt="Tributo Devido"
@@ -47,7 +47,6 @@ export default function Login() {
               width: 'auto',
               display: 'block',
               margin: '0 auto',
-              borderRadius: 4,
             }}
           />
         </div>
@@ -55,16 +54,32 @@ export default function Login() {
         <h1 style={{ marginTop: 0, marginBottom: 6, fontSize: 24 }}>Jogos Internos</h1>
         <div style={{
           fontFamily: 'Rajdhani, sans-serif',
-          fontSize: 10, fontWeight: 600, letterSpacing: 3,
+          fontSize: 10, fontWeight: 600, letterSpacing: 2.5,
           color: 'var(--amarelo)', textTransform: 'uppercase',
           marginBottom: 22,
         }}>
-          Edição 1 · Dr. Fabrício Assini
+          Edição 1 · 04/2026 · Fabrício Assini
         </div>
 
-        <p style={{ color: 'var(--branco-70)', fontSize: 13, marginBottom: 24, lineHeight: 1.65 }}>
-          Desafio de 3 semanas — <strong style={{ color: 'var(--amarelo)' }}>energia</strong>, <strong style={{ color: 'var(--amarelo)' }}>movimento</strong> e <strong style={{ color: 'var(--amarelo)' }}>controle mental</strong>.<br />
-          Entre com seu e-mail <strong style={{ color: '#fff' }}>@tributodevido.com.br</strong>.
+        <p style={{ color: 'var(--branco-70)', fontSize: 13, marginBottom: 12, lineHeight: 1.6 }}>
+          <strong style={{ color: 'var(--amarelo)', fontSize: 15, letterSpacing: 1 }}>Desafio 21 dias</strong>
+        </p>
+
+        <div style={{
+          display: 'flex', justifyContent: 'center', gap: 18,
+          flexWrap: 'wrap',
+          marginBottom: 20,
+          fontFamily: 'Rajdhani, sans-serif',
+          fontSize: 11, fontWeight: 600, letterSpacing: 2,
+          color: '#fff', textTransform: 'uppercase',
+        }}>
+          <span>🍎 Energia</span>
+          <span>🏃 Movimento</span>
+          <span>🧠 Controle Mental</span>
+        </div>
+
+        <p style={{ color: 'var(--branco-70)', fontSize: 12, marginBottom: 20, lineHeight: 1.55 }}>
+          Entre com seu e-mail <strong style={{ color: '#fff' }}>@tributodevido.com.br</strong>
         </p>
 
         {dominioBloqueado && (

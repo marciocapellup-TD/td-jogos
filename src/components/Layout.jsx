@@ -17,7 +17,7 @@ export default function Layout() {
         fontSize: 11,
         marginTop: 40,
       }}>
-        Tributo Devido — Jogos Internos · 20/04 a 10/05/2026
+        Tributo Devido — Jogos Internos · 20/04 a 20/05/2026
       </footer>
     </>
   );

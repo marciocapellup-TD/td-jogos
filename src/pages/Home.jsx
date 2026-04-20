@@ -115,9 +115,9 @@ export default function Home() {
         <StatCard
           label={semana >= 1 && semana <= 3 ? `Semana ${semana} de 3` : semana === 0 ? 'Pré-desafio' : 'Encerrado'}
           value={semana >= 1 && semana <= 3 ? `${diasDecorridos()}/21` : '—'}
-          sub="dias do desafio"
+          sub="dias úteis decorridos"
         />
-        <StatCard label="Dias restantes" value={diasRestantes()} sub="até 10/05" />
+        <StatCard label="Dias úteis restantes" value={diasRestantes()} sub="até 20/05" />
         <StatCard label="Seus pontos" value={meusPontos} sub={profile?.groups?.nome} cor={profile?.groups?.cor} />
       </div>
 

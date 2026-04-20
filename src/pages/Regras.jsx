@@ -11,10 +11,10 @@ export default function Regras() {
       <div className="card" style={{ marginBottom: 22 }}>
         <div className="label" style={{ marginBottom: 8 }}>Visão geral</div>
         <p style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--branco-70)' }}>
-          Desafio de <strong style={{ color: 'var(--amarelo)' }}>21 dias úteis</strong> (20/04 a 10/05),
+          Desafio de <strong style={{ color: 'var(--amarelo)' }}>21 dias úteis</strong> (20/04 a 20/05),
           dividido em <strong style={{ color: 'var(--amarelo)' }}>3 semanas</strong>, com metas
           crescentes. São <strong style={{ color: 'var(--amarelo)' }}>26 participantes em 5 grupos</strong>.
-          Todos os 21 dias úteis pontuam. Quanto mais você participar, mais pontos soma para o seu time.
+          Só <strong>dias úteis</strong> pontuam (sábados, domingos e os 2 feriados — 21/04 e 01/05 — não contam). Quanto mais você participar, mais pontos soma para o seu time.
         </p>
       </div>
 
@@ -68,9 +68,9 @@ export default function Regras() {
             </tr>
           </thead>
           <tbody>
-            <LinhaSemana n={1} periodo="20/04 a 26/04" mov={METAS.movimento[1]} men={METAS.mental[1]} />
-            <LinhaSemana n={2} periodo="27/04 a 03/05" mov={METAS.movimento[2]} men={METAS.mental[2]} />
-            <LinhaSemana n={3} periodo="04/05 a 10/05" mov={METAS.movimento[3]} men={METAS.mental[3]} />
+            <LinhaSemana n={1} periodo="20/04 a 29/04 (dias úteis 1–7)" mov={METAS.movimento[1]} men={METAS.mental[1]} />
+            <LinhaSemana n={2} periodo="30/04 a 11/05 (dias úteis 8–14)" mov={METAS.movimento[2]} men={METAS.mental[2]} />
+            <LinhaSemana n={3} periodo="12/05 a 20/05 (dias úteis 15–21)" mov={METAS.movimento[3]} men={METAS.mental[3]} />
           </tbody>
         </table>
         <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 10, fontStyle: 'italic' }}>
@@ -94,11 +94,14 @@ export default function Regras() {
       {/* Regras importantes */}
       <h3 style={{ marginBottom: 12 }}>Regras importantes</h3>
       <div className="grid-cards" style={{ marginBottom: 28 }}>
+        <Regra emoji="📆" titulo="Só dias úteis">
+          Posts de <strong>sábado, domingo ou feriado</strong> (21/04 e 01/05) são aceitos mas ganham <strong>0 pts</strong>. Só dias úteis valem.
+        </Regra>
         <Regra emoji="📅" titulo="Sem backfill">
           O post é registrado com a <strong>data de hoje</strong>. Esqueceu ontem? Não dá pra recuperar.
         </Regra>
         <Regra emoji="🔥" titulo="Aquecimento">
-          Pode postar no fim de semana anterior (18-19/04) mas <strong>os pontos só contam a partir de segunda 20/04</strong>.
+          Pode postar no fim de semana anterior (18-19/04) pra treinar o fluxo — mas <strong>os pontos só contam a partir da abertura oficial: segunda 20/04</strong>.
         </Regra>
         <Regra emoji="🚫" titulo="Limite diário">
           <strong>1 movimento</strong> + <strong>1 mental</strong> + até <strong>2 frutas</strong> por dia. Máximo de <strong>7 pts/dia por pessoa</strong> e <strong>35 pts/dia por grupo</strong> (equidade — mesmo teto pra grupos de 5 e 6 pessoas).
@@ -125,7 +128,7 @@ export default function Regras() {
         <div className="label" style={{ marginBottom: 8 }}>Pontuação máxima</div>
         <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--branco-70)' }}>
           <div style={{ fontSize: 11, color: 'var(--branco-45)', marginBottom: 8 }}>
-            Considerando os 21 dias úteis do desafio (20/04 a 10/05)
+            Considerando os 21 dias úteis do desafio (20/04 a 20/05)
           </div>
           <div>
             🍎 <strong>2 frutas × 21 dias úteis</strong> = até <strong style={{ color: 'var(--amarelo)' }}>42 pts</strong>

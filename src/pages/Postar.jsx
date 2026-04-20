@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { CATEGORIAS, previewPontos } from '../lib/scoring';
-import { calculaSemanaAtual, metasDaSemana, MAX_PONTOS_DIA_PESSOA, MAX_PONTOS_DIA_GRUPO } from '../lib/weeks';
+import { calculaSemanaAtual, metasDaSemana, MAX_PONTOS_DIA_PESSOA, MAX_PONTOS_DIA_GRUPO, motivoNaoPontua } from '../lib/weeks';
 import { hojeISO } from '../lib/dates';
 import FotoUpload from '../components/FotoUpload';
 
@@ -130,7 +130,13 @@ export default function Postar() {
           Você pode postar agora mas os <strong>pontos só contam a partir de segunda</strong>.
         </AlertaBox>
       )}
-      {semana > 3 && <AlertaBox>Desafio encerrado em 10/05.</AlertaBox>}
+      {semana > 3 && <AlertaBox>Desafio encerrado em 20/05.</AlertaBox>}
+
+      {semana >= 1 && semana <= 3 && motivoNaoPontua() && (
+        <AlertaBox>
+          📅 Hoje é <strong>{motivoNaoPontua()}</strong>. Você pode registrar mas <strong>não pontua</strong> — só dias úteis valem.
+        </AlertaBox>
+      )}
 
       {postsRejeitadosHoje.length > 0 && !jaPostouMovMental && (
         <div style={{

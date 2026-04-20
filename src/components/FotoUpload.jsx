@@ -88,12 +88,14 @@ export default function FotoUpload({ userId, onUploaded }) {
           }}>
             <div style={{ fontSize: 30, marginBottom: 8 }}>📷</div>
             <div className="label">Toque para anexar foto</div>
+            <div style={{ fontSize: 10, color: 'var(--branco-45)', marginTop: 6, letterSpacing: 1 }}>
+              Câmera ou galeria
+            </div>
           </div>
         )}
         <input
           type="file"
           accept="image/*"
-          capture="environment"
           onChange={onChange}
           style={{ display: 'none' }}
         />

@@ -222,6 +222,7 @@ declare
   v_claim_id int;
   v_uid uuid := auth.uid();
   v_normalized text := lower(public.unaccent(coalesce(p_nome,'')));
+  v_first_token text := split_part(v_normalized, ' ', 1);
 begin
   if v_uid is null then
     raise exception 'sem sessao';
@@ -231,7 +232,7 @@ begin
     return v_uid;
   end if;
 
-  -- match por email
+  -- match 1: por email exato
   v_claim_id := (
     select id from pending_claims
     where claimed_by is null
@@ -240,12 +241,22 @@ begin
     limit 1
   );
 
-  -- fallback por nome normalizado
+  -- match 2: nome completo normalizado
   if v_claim_id is null then
     v_claim_id := (
       select id from pending_claims
       where claimed_by is null
         and lower(public.unaccent(nome_exibicao)) = v_normalized
+      limit 1
+    );
+  end if;
+
+  -- match 3: primeiro nome normalizado (Google retorna nome completo, seed tem nome parcial)
+  if v_claim_id is null and length(v_first_token) >= 3 then
+    v_claim_id := (
+      select id from pending_claims
+      where claimed_by is null
+        and lower(split_part(public.unaccent(nome_exibicao), ' ', 1)) = v_first_token
       limit 1
     );
   end if;

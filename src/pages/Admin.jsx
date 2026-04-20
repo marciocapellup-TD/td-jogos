@@ -447,7 +447,7 @@ function Grupos() {
                             background: 'rgba(255,255,255,0.2)',
                             flexShrink: 0,
                           }} title="Ainda não logou" />
-                          <span style={{ color: 'var(--branco-45)' }}>
+                          <span style={{ color: 'var(--branco-45)', flex: 1 }}>
                             {m.nome_exibicao}
                           </span>
                           <span style={{
@@ -455,8 +455,25 @@ function Grupos() {
                             color: 'var(--branco-45)', textTransform: 'uppercase',
                             fontFamily: 'Rajdhani', fontWeight: 700,
                           }}>
-                            · pendente
+                            pendente
                           </span>
+                          <button
+                            onClick={async () => {
+                              if (!confirm(`Remover "${m.nome_exibicao}" da lista de pendentes?\n\nUse quando a pessoa já logou com nome diferente (ex: nome completo do Google) e virou duplicado.`)) return;
+                              await supabase.from('pending_claims').delete().eq('id', m.id);
+                              carregar();
+                            }}
+                            style={{
+                              background: 'transparent',
+                              border: '1px solid rgba(192,57,43,0.4)',
+                              color: 'var(--vermelho)',
+                              fontSize: 10, padding: '2px 6px',
+                              borderRadius: 3, cursor: 'pointer',
+                            }}
+                            title="Remover este pending"
+                          >
+                            ✕
+                          </button>
                         </div>
                       ))}
                     </div>

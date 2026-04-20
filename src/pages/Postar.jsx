@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { CATEGORIAS, previewPontos } from '../lib/scoring';
-import { calculaSemanaAtual, metasDaSemana } from '../lib/weeks';
+import { calculaSemanaAtual, metasDaSemana, motivoNaoPontua } from '../lib/weeks';
 import FotoUpload from '../components/FotoUpload';
 
 export default function Postar() {
@@ -85,6 +85,11 @@ export default function Postar() {
         </AlertaBox>
       )}
       {semana > 3 && <AlertaBox>Desafio encerrado em 10/05.</AlertaBox>}
+      {semana >= 1 && semana <= 3 && motivoNaoPontua() && (
+        <AlertaBox>
+          📅 Hoje é <strong>{motivoNaoPontua()}</strong>. Você pode registrar mas <strong>não pontua</strong> — só dias úteis contam.
+        </AlertaBox>
+      )}
 
       <form onSubmit={enviar} className="card">
         {categoria === 'energia' && (

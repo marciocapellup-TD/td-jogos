@@ -3,12 +3,32 @@
 export const DATA_INICIO = new Date(2026, 3, 20); // 20/04/2026 (mês 0-indexado)
 export const DATA_FIM = new Date(2026, 4, 10);    // 10/05/2026
 
+// Feriados nacionais dentro do periodo do desafio (formato YYYY-MM-DD)
+export const FERIADOS = ['2026-04-21', '2026-05-01'];
+
 export const METAS = {
   movimento: { 1: 20, 2: 25, 3: 30 },
   mental:    { 1: 3,  2: 4,  3: 5  },
   energia_max_dia: 2,
   pontos: { energia: 1, movimento: 3, mental: 2 },
 };
+
+export function ehDiaUtil(data = new Date()) {
+  const dow = data.getDay(); // 0 = domingo, 6 = sábado
+  if (dow === 0 || dow === 6) return false;
+  const iso = data.toISOString().slice(0, 10);
+  if (FERIADOS.includes(iso)) return false;
+  return true;
+}
+
+export function motivoNaoPontua(data = new Date()) {
+  const dow = data.getDay();
+  if (dow === 0) return 'domingo — não pontua';
+  if (dow === 6) return 'sábado — não pontua';
+  const iso = data.toISOString().slice(0, 10);
+  if (FERIADOS.includes(iso)) return 'feriado — não pontua';
+  return null;
+}
 
 function daysBetween(a, b) {
   const MS = 1000 * 60 * 60 * 24;

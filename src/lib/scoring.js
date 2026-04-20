@@ -1,10 +1,11 @@
-import { METAS, calculaSemanaAtual } from './weeks';
+import { METAS, calculaSemanaAtual, ehDiaUtil } from './weeks';
 
 // Prever os pontos que um post ganharia se aprovado. Só para exibição no formulário.
 export function previewPontos(categoria, { minutos, quantidade_frutas, data = new Date() }) {
   const semana = calculaSemanaAtual(data);
+  if (semana < 1 || semana > 3) return 0;   // fora do desafio = 0
+  if (!ehDiaUtil(data)) return 0;            // fim de semana / feriado = 0
   if (categoria === 'energia') return Number(quantidade_frutas) || 0;
-  if (semana < 1 || semana > 3) return 0;
   if (categoria === 'movimento') {
     return (minutos >= METAS.movimento[semana]) ? METAS.pontos.movimento : 0;
   }

@@ -8,6 +8,7 @@ import Postar from './pages/Postar';
 import MeusPosts from './pages/MeusPosts';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
+import Regras from './pages/Regras';
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="postar/:categoria" element={<Postar />} />
           <Route path="meus-posts" element={<MeusPosts />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="regras" element={<Regras />} />
           <Route path="admin" element={<ProtectedRoute admin><Admin /></ProtectedRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

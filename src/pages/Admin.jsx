@@ -295,9 +295,16 @@ function Grupos() {
   const [corTemp, setCorTemp] = useState('');
   const [salvando, setSalvando] = useState(false);
 
+  const [profiles, setProfiles] = useState([]);
+  const [pending, setPending] = useState([]);
+
   const carregar = () => {
     supabase.from('groups').select('*').order('id')
       .then(({ data }) => setGroups(data || []));
+    supabase.from('profiles').select('id, nome_exibicao, group_id, ativo, role').order('nome_exibicao')
+      .then(({ data }) => setProfiles(data || []));
+    supabase.from('pending_claims').select('id, nome_exibicao, group_id').is('claimed_by', null).order('nome_exibicao')
+      .then(({ data }) => setPending(data || []));
   };
   useEffect(carregar, []);
 
@@ -376,20 +383,85 @@ function Grupos() {
               </div>
             ) : (
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="label" style={{ color: g.cor }}>Grupo · ID {g.id}</div>
                     <div style={{ fontFamily: 'Rajdhani', fontSize: 18, fontWeight: 700, marginTop: 2 }}>
                       {g.nome}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 2 }}>
-                      Cor: <span style={{ color: g.cor, fontWeight: 600 }}>{g.cor}</span>
+                    <div style={{ fontSize: 10, color: 'var(--branco-45)', marginTop: 2, letterSpacing: 1 }}>
+                      {g.cor}
                     </div>
                   </div>
                   <button className="btn btn-ghost" onClick={() => iniciarEdicao(g)} style={{ fontSize: 10, padding: '6px 10px' }}>
                     Editar
                   </button>
                 </div>
+
+                {(() => {
+                  const membrosAtivos = profiles.filter(p => p.group_id === g.id && p.ativo);
+                  const membrosPending = pending.filter(p => p.group_id === g.id);
+                  const total = membrosAtivos.length + membrosPending.length;
+
+                  return (
+                    <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                      <div className="label" style={{ marginBottom: 8 }}>
+                        Membros ({total})
+                      </div>
+                      {total === 0 && (
+                        <div style={{ fontSize: 11, color: 'var(--branco-45)' }}>
+                          Nenhum membro atribuído.
+                        </div>
+                      )}
+                      {membrosAtivos.map(m => (
+                        <div key={m.id} style={{
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          padding: '4px 0',
+                          fontSize: 12,
+                        }}>
+                          <span style={{
+                            width: 6, height: 6, borderRadius: '50%',
+                            background: 'var(--verde)',
+                            flexShrink: 0,
+                          }} title="Logado" />
+                          <span style={{ color: '#fff' }}>{m.nome_exibicao}</span>
+                          {m.role !== 'user' && (
+                            <span style={{
+                              fontSize: 9, letterSpacing: 1,
+                              color: 'var(--amarelo)', textTransform: 'uppercase',
+                              fontFamily: 'Rajdhani', fontWeight: 700,
+                            }}>
+                              · {m.role}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                      {membrosPending.map(m => (
+                        <div key={`pc-${m.id}`} style={{
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          padding: '4px 0',
+                          fontSize: 12,
+                        }}>
+                          <span style={{
+                            width: 6, height: 6, borderRadius: '50%',
+                            background: 'rgba(255,255,255,0.2)',
+                            flexShrink: 0,
+                          }} title="Ainda não logou" />
+                          <span style={{ color: 'var(--branco-45)' }}>
+                            {m.nome_exibicao}
+                          </span>
+                          <span style={{
+                            fontSize: 9, letterSpacing: 1,
+                            color: 'var(--branco-45)', textTransform: 'uppercase',
+                            fontFamily: 'Rajdhani', fontWeight: 700,
+                          }}>
+                            · pendente
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>

@@ -11,10 +11,10 @@ export default function Regras() {
       <div className="card" style={{ marginBottom: 22 }}>
         <div className="label" style={{ marginBottom: 8 }}>Visão geral</div>
         <p style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--branco-70)' }}>
-          Desafio de <strong style={{ color: 'var(--amarelo)' }}>21 dias corridos</strong> (20/04 a 10/05),
+          Desafio de <strong style={{ color: 'var(--amarelo)' }}>21 dias úteis</strong> (20/04 a 10/05),
           dividido em <strong style={{ color: 'var(--amarelo)' }}>3 semanas</strong>, com metas
           crescentes. São <strong style={{ color: 'var(--amarelo)' }}>26 participantes em 5 grupos</strong>.
-          Todos os 21 dias pontuam. Quanto mais você participar, mais pontos soma para o seu time.
+          Todos os 21 dias úteis pontuam. Quanto mais você participar, mais pontos soma para o seu time.
         </p>
       </div>
 
@@ -125,16 +125,16 @@ export default function Regras() {
         <div className="label" style={{ marginBottom: 8 }}>Pontuação máxima</div>
         <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--branco-70)' }}>
           <div style={{ fontSize: 11, color: 'var(--branco-45)', marginBottom: 8 }}>
-            Considerando os 21 dias do desafio (20/04 a 10/05)
+            Considerando os 21 dias úteis do desafio (20/04 a 10/05)
           </div>
           <div>
-            🍎 <strong>2 frutas × 21 dias</strong> = até <strong style={{ color: 'var(--amarelo)' }}>42 pts</strong>
+            🍎 <strong>2 frutas × 21 dias úteis</strong> = até <strong style={{ color: 'var(--amarelo)' }}>42 pts</strong>
           </div>
           <div>
-            🏃 <strong>1 movimento × 21 dias × 3 pts</strong> = até <strong style={{ color: 'var(--amarelo)' }}>63 pts</strong>
+            🏃 <strong>1 movimento × 21 dias úteis × 3 pts</strong> = até <strong style={{ color: 'var(--amarelo)' }}>63 pts</strong>
           </div>
           <div>
-            🧠 <strong>1 mental × 21 dias × 2 pts</strong> = até <strong style={{ color: 'var(--amarelo)' }}>42 pts</strong>
+            🧠 <strong>1 mental × 21 dias úteis × 2 pts</strong> = até <strong style={{ color: 'var(--amarelo)' }}>42 pts</strong>
           </div>
           <div style={{
             marginTop: 12, paddingTop: 12,
@@ -147,7 +147,7 @@ export default function Regras() {
             marginTop: 6, fontSize: 11, color: 'var(--branco-45)',
           }}>
             Máximo por dia: 7 pts (pessoa) · 35 pts (grupo — igual pra todos).<br />
-            Máximo acumulado em 21 dias: <strong>147 pts</strong> (pessoa) · <strong>735 pts</strong> (grupo).
+            Máximo acumulado em 21 dias úteis: <strong>147 pts</strong> (pessoa) · <strong>735 pts</strong> (grupo).
           </div>
         </div>
       </div>

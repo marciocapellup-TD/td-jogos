@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { CATEGORIAS, previewPontos } from '../lib/scoring';
 import { calculaSemanaAtual, metasDaSemana, MAX_PONTOS_DIA_PESSOA, MAX_PONTOS_DIA_GRUPO } from '../lib/weeks';
+import { hojeISO } from '../lib/dates';
 import FotoUpload from '../components/FotoUpload';
 
 export default function Postar() {
@@ -24,7 +25,7 @@ export default function Postar() {
 
   useEffect(() => {
     if (!profile?.id) return;
-    const hoje = new Date().toISOString().slice(0, 10);
+    const hoje = hojeISO();
 
     const recarregar = async () => {
       // Posts da categoria (pra limite diário)
@@ -106,6 +107,7 @@ export default function Postar() {
       categoria,
       foto_url: fotoUrl,
       status: 'pending',
+      data_registro: hojeISO(), // força data local BR em vez de current_date UTC
       ...(categoria === 'energia'
         ? { quantidade_frutas: Number(quantidadeFrutas) }
         : { minutos: Number(minutos) }),

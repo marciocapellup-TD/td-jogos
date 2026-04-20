@@ -1,4 +1,5 @@
 import { CATEGORIAS } from '../lib/scoring';
+import { formatarDataBR } from '../lib/dates';
 
 export default function PostCard({ post, children }) {
   const cat = CATEGORIAS[post.categoria];
@@ -14,7 +15,7 @@ export default function PostCard({ post, children }) {
         <div>
           <div className="label" style={{ color: cat.cor }}>{cat.emoji} {cat.label}</div>
           <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 3 }}>
-            {new Date(post.data_registro).toLocaleDateString('pt-BR')}
+            {formatarDataBR(post.data_registro)}
             {post.profiles?.nome_exibicao && <> · {post.profiles.nome_exibicao}</>}
           </div>
         </div>

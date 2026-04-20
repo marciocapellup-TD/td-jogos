@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { calculaSemanaAtual, metasDaSemana, diasRestantes, diasDecorridos, MAX_PONTOS_DIA_PESSOA, MAX_PONTOS_DIA_GRUPO, maxAcumuladoGrupo, aplicarCapDiarioGrupo } from '../lib/weeks';
+import { hojeISO } from '../lib/dates';
 import { CATEGORIAS } from '../lib/scoring';
 import StatCard from '../components/StatCard';
 import RankingBar from '../components/RankingBar';
@@ -17,7 +18,7 @@ export default function Home() {
 
   useEffect(() => {
     (async () => {
-      const hoje = new Date().toISOString().slice(0, 10);
+      const hoje = hojeISO();
       const [postsRes, profilesRes, groupsRes] = await Promise.all([
         supabase.from('posts').select('pontos, user_id, categoria, data_registro').eq('status', 'approved'),
         supabase.from('profiles').select('id, group_id'),

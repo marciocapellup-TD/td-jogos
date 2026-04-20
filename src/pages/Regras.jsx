@@ -11,10 +11,10 @@ export default function Regras() {
       <div className="card" style={{ marginBottom: 22 }}>
         <div className="label" style={{ marginBottom: 8 }}>Visão geral</div>
         <p style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--branco-70)' }}>
-          Desafio de <strong style={{ color: 'var(--amarelo)' }}>21 dias úteis</strong> (20/04 a 20/05),
+          Desafio de <strong style={{ color: 'var(--amarelo)' }}>21 dias corridos</strong> (20/04 a 10/05),
           dividido em <strong style={{ color: 'var(--amarelo)' }}>3 semanas</strong>, com metas
           crescentes. São <strong style={{ color: 'var(--amarelo)' }}>26 participantes em 5 grupos</strong>.
-          Só <strong>dias úteis</strong> pontuam (sábados, domingos e os 2 feriados — 21/04 e 01/05 — não contam). Quanto mais você participar, mais pontos soma para o seu time.
+          <strong>Todos os dias pontuam</strong> — incluindo sábados, domingos e feriados. Quanto mais você participar, mais pontos soma para o seu time.
         </p>
       </div>
 
@@ -68,9 +68,9 @@ export default function Regras() {
             </tr>
           </thead>
           <tbody>
-            <LinhaSemana n={1} periodo="20/04 a 29/04 (dias úteis 1–7)" mov={METAS.movimento[1]} men={METAS.mental[1]} />
-            <LinhaSemana n={2} periodo="30/04 a 11/05 (dias úteis 8–14)" mov={METAS.movimento[2]} men={METAS.mental[2]} />
-            <LinhaSemana n={3} periodo="12/05 a 20/05 (dias úteis 15–21)" mov={METAS.movimento[3]} men={METAS.mental[3]} />
+            <LinhaSemana n={1} periodo="20/04 a 26/04 (seg a dom)" mov={METAS.movimento[1]} men={METAS.mental[1]} />
+            <LinhaSemana n={2} periodo="27/04 a 03/05 (seg a dom)" mov={METAS.movimento[2]} men={METAS.mental[2]} />
+            <LinhaSemana n={3} periodo="04/05 a 10/05 (seg a dom)" mov={METAS.movimento[3]} men={METAS.mental[3]} />
           </tbody>
         </table>
         <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 10, fontStyle: 'italic' }}>
@@ -94,9 +94,6 @@ export default function Regras() {
       {/* Regras importantes */}
       <h3 style={{ marginBottom: 12 }}>Regras importantes</h3>
       <div className="grid-cards" style={{ marginBottom: 28 }}>
-        <Regra emoji="📆" titulo="Só dias úteis">
-          Posts de <strong>sábado, domingo ou feriado</strong> (21/04 e 01/05) são aceitos mas ganham <strong>0 pts</strong>. Só dias úteis valem.
-        </Regra>
         <Regra emoji="📅" titulo="Sem backfill">
           O post é registrado com a <strong>data de hoje</strong>. Esqueceu ontem? Não dá pra recuperar.
         </Regra>
@@ -128,16 +125,16 @@ export default function Regras() {
         <div className="label" style={{ marginBottom: 8 }}>Pontuação máxima</div>
         <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--branco-70)' }}>
           <div style={{ fontSize: 11, color: 'var(--branco-45)', marginBottom: 8 }}>
-            Considerando os 21 dias úteis do desafio (20/04 a 20/05)
+            Considerando os 21 dias do desafio (20/04 a 10/05)
           </div>
           <div>
-            🍎 <strong>2 frutas × 21 dias úteis</strong> = até <strong style={{ color: 'var(--amarelo)' }}>42 pts</strong>
+            🍎 <strong>2 frutas × 21 dias</strong> = até <strong style={{ color: 'var(--amarelo)' }}>42 pts</strong>
           </div>
           <div>
-            🏃 <strong>1 movimento × 21 dias úteis × 3 pts</strong> = até <strong style={{ color: 'var(--amarelo)' }}>63 pts</strong>
+            🏃 <strong>1 movimento × 21 dias × 3 pts</strong> = até <strong style={{ color: 'var(--amarelo)' }}>63 pts</strong>
           </div>
           <div>
-            🧠 <strong>1 mental × 21 dias úteis × 2 pts</strong> = até <strong style={{ color: 'var(--amarelo)' }}>42 pts</strong>
+            🧠 <strong>1 mental × 21 dias × 2 pts</strong> = até <strong style={{ color: 'var(--amarelo)' }}>42 pts</strong>
           </div>
           <div style={{
             marginTop: 12, paddingTop: 12,
@@ -150,7 +147,7 @@ export default function Regras() {
             marginTop: 6, fontSize: 11, color: 'var(--branco-45)',
           }}>
             Máximo por dia: 7 pts (pessoa) · 35 pts (grupo — igual pra todos).<br />
-            Máximo acumulado em 21 dias úteis: <strong>147 pts</strong> (pessoa) · <strong>735 pts</strong> (grupo).
+            Máximo acumulado em 21 dias: <strong>147 pts</strong> (pessoa) · <strong>735 pts</strong> (grupo).
           </div>
         </div>
       </div>

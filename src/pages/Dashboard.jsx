@@ -128,7 +128,7 @@ export default function Dashboard() {
       <h1 style={{ marginBottom: 22 }}>Dashboard</h1>
 
       <div className="grid-cards" style={{ marginBottom: 24 }}>
-        <StatCard label="Dia útil" value={`${diasDecorridos()} / 21`} sub="20/04 → 20/05" />
+        <StatCard label="Dia" value={`${diasDecorridos()} / 21`} sub="20/04 → 10/05" />
         <StatCard label="Registros aprovados" value={totalPosts} />
         <StatCard label="Participantes" value={participantes} />
         <StatCard label="Grupo líder" value={rankingGrupos[0]?.nome || '—'} cor={rankingGrupos[0]?.cor} sub={`${rankingGrupos[0]?.pontos || 0} pts`} />

@@ -108,7 +108,7 @@ export default function Login() {
           fontSize: 10, color: 'var(--branco-45)', letterSpacing: 1.5,
           fontFamily: 'Rajdhani, sans-serif', fontWeight: 600, textTransform: 'uppercase',
         }}>
-          21 dias úteis · 20/04 a 20/05 · 5 grupos · 26 participantes
+          21 dias · 20/04 a 10/05 · 5 grupos · 26 participantes
         </div>
       </div>
     </div>

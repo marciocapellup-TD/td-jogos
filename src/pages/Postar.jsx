@@ -26,16 +26,16 @@ export default function Postar() {
     if (!profile?.id) return;
     const hoje = new Date().toISOString().slice(0, 10);
 
-    // Posts da categoria (pra limite diário)
-    supabase.from('posts')
-      .select('*')
-      .eq('user_id', profile.id)
-      .eq('data_registro', hoje)
-      .eq('categoria', categoria)
-      .then(({ data }) => setPostsHoje(data || []));
+    const recarregar = async () => {
+      // Posts da categoria (pra limite diário)
+      const { data: postsCat } = await supabase.from('posts')
+        .select('*')
+        .eq('user_id', profile.id)
+        .eq('data_registro', hoje)
+        .eq('categoria', categoria);
+      setPostsHoje(postsCat || []);
 
-    // Pontos totais hoje — pessoa + grupo
-    (async () => {
+      // Pontos totais hoje — pessoa + grupo
       const { data: meus } = await supabase.from('posts')
         .select('pontos').eq('user_id', profile.id).eq('status', 'approved').eq('data_registro', hoje);
       const pessoa = (meus || []).reduce((a, x) => a + (x.pontos || 0), 0);
@@ -53,13 +53,33 @@ export default function Postar() {
         }
       }
       setPontosHoje({ pessoa, grupo, tamanhoGrupo: tamanho });
-    })();
+    };
+
+    recarregar();
+
+    // Realtime: recarrega quando admin aprova, reprova ou exclui post do usuário
+    const canal = supabase
+      .channel('postar-' + profile.id + '-' + categoria)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'posts',
+        filter: `user_id=eq.${profile.id}`,
+      }, () => recarregar())
+      .subscribe();
+
+    return () => { supabase.removeChannel(canal); };
   }, [profile?.id, profile?.group_id, categoria]);
 
   if (!cat) return <div>Categoria inválida.</div>;
 
-  const frutasHoje = postsHoje.reduce((a, p) => a + (p.quantidade_frutas || 0), 0);
-  const jaPostouMovMental = categoria !== 'energia' && postsHoje.length > 0;
+  // Apenas posts VALIDOS (pending ou approved) ocupam slot do dia.
+  // Rejeitados/deletados nao bloqueiam — usuario pode postar de novo.
+  const postsValidos = postsHoje.filter(p => p.status !== 'rejected');
+  const frutasHoje = postsValidos.reduce((a, p) => a + (p.quantidade_frutas || 0), 0);
+  const jaPostouMovMental = categoria !== 'energia' && postsValidos.length > 0;
+  const postsRejeitadosHoje = postsHoje.filter(p => p.status === 'rejected');
+
   // Permite postar no aquecimento (pré-desafio) — pontos só contam a partir de 20/04.
   // Só bloqueia depois que o desafio encerra.
   const bloqueado = (categoria === 'energia' && frutasHoje + Number(quantidadeFrutas) > 2)
@@ -109,6 +129,27 @@ export default function Postar() {
         </AlertaBox>
       )}
       {semana > 3 && <AlertaBox>Desafio encerrado em 10/05.</AlertaBox>}
+
+      {postsRejeitadosHoje.length > 0 && !jaPostouMovMental && (
+        <div style={{
+          background: 'rgba(192,57,43,0.1)',
+          border: '1px solid rgba(192,57,43,0.35)',
+          borderLeft: '3px solid var(--vermelho)',
+          padding: '10px 14px',
+          borderRadius: 3,
+          marginBottom: 16,
+          fontSize: 13,
+          color: '#fff',
+        }}>
+          ⚠️ Você teve um post reprovado hoje.{' '}
+          {postsRejeitadosHoje[0].motivo_reprovacao && (
+            <span style={{ color: 'var(--branco-70)', fontStyle: 'italic' }}>
+              Motivo: "{postsRejeitadosHoje[0].motivo_reprovacao}". {' '}
+            </span>
+          )}
+          <strong>Você pode postar novamente</strong> — ajuste conforme o motivo e tente de novo.
+        </div>
+      )}
 
       {/* Celebração: bateu meta pessoal do dia */}
       {pontosHoje.pessoa >= MAX_PONTOS_DIA_PESSOA && (

@@ -149,6 +149,20 @@ h3 { font-size: 13px; letter-spacing: 2px; color: var(--amarelo); }
 .input:focus { outline: none; border-color: var(--amarelo); }
 .input::placeholder { color: rgba(255, 255, 255, 0.3); }
 
+/* Dropdown nativo abre com fundo do sistema — forçamos cores do tema
+   pra lista ficar legível (Chrome/Edge/Firefox) */
+select.input option,
+select option {
+  background-color: var(--azul);
+  color: #fff;
+  padding: 8px;
+}
+select.input option:checked,
+select.input option:hover {
+  background-color: var(--amarelo);
+  color: var(--azul);
+}
+
 .form-group { margin-bottom: 16px; }
 .form-group label {
   display: block;

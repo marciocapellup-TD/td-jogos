@@ -115,17 +115,8 @@ begin
   v_inicio := (select data_inicio from challenge_config where id = 1);
   v_fim    := (select data_fim    from challenge_config where id = 1);
 
-  -- Pre-desafio ou pos-desafio: zero pontos.
+  -- Pre-desafio ou pos-desafio: zero pontos (aquecimento / fora do periodo).
   if p_data < v_inicio or p_data > v_fim then
-    return 0;
-  end if;
-
-  -- So dias uteis contam. Sabado (6) e domingo (0) nao pontuam.
-  if extract(dow from p_data) in (0, 6) then
-    return 0;
-  end if;
-  -- Feriados nacionais no periodo do desafio.
-  if p_data in (date '2026-04-21', date '2026-05-01') then
     return 0;
   end if;
 

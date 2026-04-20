@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
-import { calculaSemanaAtual, metasDaSemana, diasRestantes, diasDecorridos } from '../lib/weeks';
+import { calculaSemanaAtual, metasDaSemana, diasRestantes, diasDecorridos, MAX_PONTOS_DIA_PESSOA, maxPontosDiaGrupo, maxAcumuladoPessoa, maxAcumuladoGrupo } from '../lib/weeks';
 import { CATEGORIAS } from '../lib/scoring';
 import StatCard from '../components/StatCard';
 import RankingBar from '../components/RankingBar';
@@ -17,8 +17,9 @@ export default function Home() {
 
   useEffect(() => {
     (async () => {
+      const hoje = new Date().toISOString().slice(0, 10);
       const [postsRes, profilesRes, groupsRes] = await Promise.all([
-        supabase.from('posts').select('pontos, user_id, categoria').eq('status', 'approved'),
+        supabase.from('posts').select('pontos, user_id, categoria, data_registro').eq('status', 'approved'),
         supabase.from('profiles').select('id, group_id'),
         supabase.from('groups').select('*').order('id'),
       ]);
@@ -29,26 +30,44 @@ export default function Home() {
 
       // Mapa user_id -> group_id
       const userGroup = Object.fromEntries(profiles.map(p => [p.id, p.group_id]));
+      // Tamanho de cada grupo
+      const tamanhoGrupo = Object.fromEntries(groups.map(g => [g.id, 0]));
+      for (const p of profiles) {
+        if (p.group_id) tamanhoGrupo[p.group_id] = (tamanhoGrupo[p.group_id] || 0) + 1;
+      }
 
-      // Soma pontos por grupo
+      // Soma pontos por grupo (total acumulado)
       const somaGrupo = Object.fromEntries(groups.map(g => [g.id, 0]));
-      // Pontos por usuario, quebrado por categoria
-      const porUser = {}; // { user_id: { energia, movimento, mental, total } }
+      const somaGrupoHoje = Object.fromEntries(groups.map(g => [g.id, 0]));
+      // Pontos por usuario
+      const porUser = {}; // { user_id: { energia, movimento, mental, total, hoje } }
 
       for (const p of posts) {
         const uid = p.user_id;
         const pts = p.pontos || 0;
         const gid = userGroup[uid];
-        if (gid) somaGrupo[gid] = (somaGrupo[gid] || 0) + pts;
-        if (!porUser[uid]) porUser[uid] = { energia: 0, movimento: 0, mental: 0, total: 0 };
-        porUser[uid][p.categoria] = (porUser[uid][p.categoria] || 0) + pts;
+        const ehHoje = p.data_registro === hoje;
+        if (gid) {
+          somaGrupo[gid] += pts;
+          if (ehHoje) somaGrupoHoje[gid] += pts;
+        }
+        if (!porUser[uid]) porUser[uid] = { energia: 0, movimento: 0, mental: 0, total: 0, hoje: 0 };
+        porUser[uid][p.categoria] += pts;
         porUser[uid].total += pts;
+        if (ehHoje) porUser[uid].hoje += pts;
       }
 
       // Sempre lista os 5 grupos (mesmo com 0 pontos), ordenados por pontos desc
       setRankingGrupos(
         groups
-          .map(g => ({ ...g, pontos: somaGrupo[g.id] || 0 }))
+          .map(g => ({
+            ...g,
+            pontos: somaGrupo[g.id] || 0,
+            pontosHoje: somaGrupoHoje[g.id] || 0,
+            maxHoje: maxPontosDiaGrupo(tamanhoGrupo[g.id]),
+            maxAcumulado: maxAcumuladoGrupo(tamanhoGrupo[g.id]),
+            tamanho: tamanhoGrupo[g.id],
+          }))
           .sort((a, b) => b.pontos - a.pontos)
       );
 
@@ -74,13 +93,13 @@ export default function Home() {
           nome: p.nome_exibicao,
           ativo: true,
           id: p.id,
-          pontos: porUser[p.id] || { energia: 0, movimento: 0, mental: 0, total: 0 },
+          pontos: porUser[p.id] || { energia: 0, movimento: 0, mental: 0, total: 0, hoje: 0 },
         }));
         const pendentes = (pend.data || []).map(p => ({
           nome: p.nome_exibicao,
           ativo: false,
           id: `pc-${p.id}`,
-          pontos: { energia: 0, movimento: 0, mental: 0, total: 0 },
+          pontos: { energia: 0, movimento: 0, mental: 0, total: 0, hoje: 0 },
         }));
         // Ordena: ativos por pontos desc, pending no final
         ativos.sort((a, b) => b.pontos.total - a.pontos.total);
@@ -214,11 +233,20 @@ export default function Home() {
                       <div style={{
                         display: 'flex', gap: 10, marginTop: 6,
                         fontSize: 11, color: 'var(--branco-70)',
-                        paddingLeft: 40,
+                        paddingLeft: 40, alignItems: 'center', flexWrap: 'wrap',
                       }}>
                         <span title="Energia (frutas)">🍎 {c.pontos.energia}</span>
                         <span title="Movimento (exercício)">🏃 {c.pontos.movimento}</span>
                         <span title="Controle mental (meditação)">🧠 {c.pontos.mental}</span>
+                        <span style={{
+                          marginLeft: 'auto',
+                          fontSize: 10, color: c.pontos.hoje >= MAX_PONTOS_DIA_PESSOA ? 'var(--verde)' : 'var(--branco-45)',
+                          letterSpacing: 1, fontFamily: 'Rajdhani', fontWeight: 700,
+                        }}>
+                          {c.pontos.hoje >= MAX_PONTOS_DIA_PESSOA
+                            ? '🎉 META!'
+                            : `HOJE ${c.pontos.hoje}/${MAX_PONTOS_DIA_PESSOA}`}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -249,12 +277,18 @@ export default function Home() {
               Placar zerado — o desafio começa segunda 20/04.
             </div>
             {rankingGrupos.map((g, i) => (
-              <RankingBar key={g.id} nome={g.nome} pontos={g.pontos} max={1} cor={g.cor} posicao={i + 1} />
+              <RankingBar
+                key={g.id} nome={g.nome} pontos={g.pontos} max={1} cor={g.cor} posicao={i + 1}
+                pontosHoje={g.pontosHoje} maxHoje={g.maxHoje} maxAcumulado={g.maxAcumulado}
+              />
             ))}
           </>
         ) : (
           rankingGrupos.map((g, i) => (
-            <RankingBar key={g.id} nome={g.nome} pontos={g.pontos} max={maxPontos} cor={g.cor} posicao={i + 1} />
+            <RankingBar
+              key={g.id} nome={g.nome} pontos={g.pontos} max={Math.max(maxPontos, g.maxAcumulado || 1)} cor={g.cor} posicao={i + 1}
+              pontosHoje={g.pontosHoje} maxHoje={g.maxHoje} maxAcumulado={g.maxAcumulado}
+            />
           ))
         )}
       </div>

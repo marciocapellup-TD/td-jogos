@@ -2,9 +2,7 @@
 
 export const DATA_INICIO = new Date(2026, 3, 20); // 20/04/2026 (mês 0-indexado)
 export const DATA_FIM = new Date(2026, 4, 10);    // 10/05/2026
-
-// Feriados nacionais dentro do periodo do desafio (formato YYYY-MM-DD)
-export const FERIADOS = ['2026-04-21', '2026-05-01'];
+export const TOTAL_DIAS_DESAFIO = 21;
 
 export const METAS = {
   movimento: { 1: 20, 2: 25, 3: 30 },
@@ -13,21 +11,12 @@ export const METAS = {
   pontos: { energia: 1, movimento: 3, mental: 2 },
 };
 
-export function ehDiaUtil(data = new Date()) {
-  const dow = data.getDay(); // 0 = domingo, 6 = sábado
-  if (dow === 0 || dow === 6) return false;
-  const iso = data.toISOString().slice(0, 10);
-  if (FERIADOS.includes(iso)) return false;
-  return true;
-}
+// Maximo teorico de pontos por pessoa por dia:
+// 2 frutas (+2) + 1 movimento na meta (+3) + 1 mental na meta (+2) = 7 pts
+export const MAX_PONTOS_DIA_PESSOA = 7;
 
-export function motivoNaoPontua(data = new Date()) {
-  const dow = data.getDay();
-  if (dow === 0) return 'domingo — não pontua';
-  if (dow === 6) return 'sábado — não pontua';
-  const iso = data.toISOString().slice(0, 10);
-  if (FERIADOS.includes(iso)) return 'feriado — não pontua';
-  return null;
+export function maxPontosDiaGrupo(tamanhoGrupo) {
+  return (tamanhoGrupo || 0) * MAX_PONTOS_DIA_PESSOA;
 }
 
 function daysBetween(a, b) {
@@ -51,7 +40,7 @@ export function diasRestantes(hoje = new Date()) {
 
 export function diasDecorridos(hoje = new Date()) {
   const diff = daysBetween(hoje, DATA_INICIO) + 1;
-  return Math.max(0, Math.min(21, diff));
+  return Math.max(0, Math.min(TOTAL_DIAS_DESAFIO, diff));
 }
 
 export function metasDaSemana(semana) {
@@ -62,4 +51,13 @@ export function metasDaSemana(semana) {
     movimento: { minutos: METAS.movimento[semana], pontos: METAS.pontos.movimento },
     mental: { minutos: METAS.mental[semana], pontos: METAS.pontos.mental },
   };
+}
+
+// Maximo acumulado ate hoje (inclusive). Pre-desafio = 0.
+export function maxAcumuladoPessoa(hoje = new Date()) {
+  return diasDecorridos(hoje) * MAX_PONTOS_DIA_PESSOA;
+}
+
+export function maxAcumuladoGrupo(tamanhoGrupo, hoje = new Date()) {
+  return diasDecorridos(hoje) * maxPontosDiaGrupo(tamanhoGrupo);
 }

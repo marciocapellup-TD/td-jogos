@@ -11,10 +11,10 @@ export default function Regras() {
       <div className="card" style={{ marginBottom: 22 }}>
         <div className="label" style={{ marginBottom: 8 }}>Visão geral</div>
         <p style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--branco-70)' }}>
-          Desafio de <strong style={{ color: 'var(--amarelo)' }}>21 dias</strong> (20/04 a 10/05),
+          Desafio de <strong style={{ color: 'var(--amarelo)' }}>21 dias corridos</strong> (20/04 a 10/05),
           dividido em <strong style={{ color: 'var(--amarelo)' }}>3 semanas</strong>, com metas
           crescentes. São <strong style={{ color: 'var(--amarelo)' }}>26 participantes em 5 grupos</strong>.
-          Quanto mais você participar, mais pontos soma para o seu time.
+          Todos os 21 dias pontuam. Quanto mais você participar, mais pontos soma para o seu time.
         </p>
       </div>
 
@@ -94,9 +94,6 @@ export default function Regras() {
       {/* Regras importantes */}
       <h3 style={{ marginBottom: 12 }}>Regras importantes</h3>
       <div className="grid-cards" style={{ marginBottom: 28 }}>
-        <Regra emoji="📆" titulo="Só dias úteis">
-          Posts em <strong>sábado, domingo ou feriado</strong> são aceitos mas ganham <strong>0 pts</strong>. Feriados no período: <strong>21/04 (Tiradentes)</strong> e <strong>01/05 (Trabalho)</strong>.
-        </Regra>
         <Regra emoji="📅" titulo="Sem backfill">
           O post é registrado com a <strong>data de hoje</strong>. Esqueceu ontem? Não dá pra recuperar.
         </Regra>
@@ -104,7 +101,10 @@ export default function Regras() {
           Pode postar no fim de semana anterior (18-19/04) mas <strong>os pontos só contam a partir de segunda 20/04</strong>.
         </Regra>
         <Regra emoji="🚫" titulo="Limite diário">
-          <strong>1 movimento</strong> + <strong>1 mental</strong> + até <strong>2 frutas</strong> por dia. Tentar ultrapassar é bloqueado.
+          <strong>1 movimento</strong> + <strong>1 mental</strong> + até <strong>2 frutas</strong> por dia. Máximo de <strong>7 pts/dia por pessoa</strong> e <strong>N × 7 pts/dia por grupo</strong> (N = tamanho do grupo).
+        </Regra>
+        <Regra emoji="🎉" titulo="Bateu a meta do dia?">
+          Quando você somar <strong>7 pts no dia</strong> (ou quando seu time somar o máximo coletivo), aparece uma mensagem de parabéns e <strong>você não precisa postar mais</strong> — pode descansar.
         </Regra>
         <Regra emoji="✅" titulo="Aprovação manual">
           Todo post fica <strong>pendente</strong> até o admin aprovar. Pontos só entram no placar depois da aprovação.
@@ -117,39 +117,6 @@ export default function Regras() {
         </Regra>
       </div>
 
-      {/* Dias úteis detalhados */}
-      <h3 style={{ marginBottom: 12 }}>Calendário do desafio</h3>
-      <div className="card" style={{ marginBottom: 28 }}>
-        <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--branco-70)' }}>
-          <div style={{ marginBottom: 10 }}>
-            Total: <strong style={{ color: 'var(--amarelo)' }}>21 dias corridos</strong> · <strong style={{ color: 'var(--amarelo)' }}>15 dias úteis</strong> que pontuam.
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-            <div style={{ padding: 10, background: 'rgba(16,185,129,0.1)', borderLeft: '3px solid var(--verde)', borderRadius: 3 }}>
-              <div className="label">Semana 1</div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>20/04 a 26/04</div>
-              <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 4 }}>
-                4 dias úteis (21/04 feriado)
-              </div>
-            </div>
-            <div style={{ padding: 10, background: 'rgba(59,130,246,0.1)', borderLeft: '3px solid var(--azul-grupo)', borderRadius: 3 }}>
-              <div className="label">Semana 2</div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>27/04 a 03/05</div>
-              <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 4 }}>
-                4 dias úteis (01/05 feriado)
-              </div>
-            </div>
-            <div style={{ padding: 10, background: 'rgba(139,92,246,0.1)', borderLeft: '3px solid var(--violeta)', borderRadius: 3 }}>
-              <div className="label">Semana 3</div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>04/05 a 10/05</div>
-              <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 4 }}>
-                5 dias úteis
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Pontuação máxima teórica */}
       <div className="card" style={{
         borderTopColor: 'var(--amarelo)',
@@ -158,23 +125,28 @@ export default function Regras() {
         <div className="label" style={{ marginBottom: 8 }}>Pontuação máxima</div>
         <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--branco-70)' }}>
           <div style={{ fontSize: 11, color: 'var(--branco-45)', marginBottom: 8 }}>
-            Considerando 15 dias úteis (exclui fins de semana e feriados)
+            Considerando os 21 dias do desafio (20/04 a 10/05)
           </div>
           <div>
-            🍎 <strong>2 frutas × 15 dias úteis</strong> = até <strong style={{ color: 'var(--amarelo)' }}>30 pts</strong>
+            🍎 <strong>2 frutas × 21 dias</strong> = até <strong style={{ color: 'var(--amarelo)' }}>42 pts</strong>
           </div>
           <div>
-            🏃 <strong>1 movimento × 15 dias × 3 pts</strong> = até <strong style={{ color: 'var(--amarelo)' }}>45 pts</strong>
+            🏃 <strong>1 movimento × 21 dias × 3 pts</strong> = até <strong style={{ color: 'var(--amarelo)' }}>63 pts</strong>
           </div>
           <div>
-            🧠 <strong>1 mental × 15 dias × 2 pts</strong> = até <strong style={{ color: 'var(--amarelo)' }}>30 pts</strong>
+            🧠 <strong>1 mental × 21 dias × 2 pts</strong> = até <strong style={{ color: 'var(--amarelo)' }}>42 pts</strong>
           </div>
           <div style={{
             marginTop: 12, paddingTop: 12,
             borderTop: '1px solid rgba(244,204,4,0.2)',
             fontSize: 15,
           }}>
-            Total máximo por pessoa: <strong style={{ color: 'var(--amarelo)', fontSize: 18 }}>105 pts</strong>
+            Total máximo por pessoa: <strong style={{ color: 'var(--amarelo)', fontSize: 18 }}>147 pts</strong>
+          </div>
+          <div style={{
+            marginTop: 6, fontSize: 11, color: 'var(--branco-45)',
+          }}>
+            Máximo por dia: 7 pts (pessoa) · 35 pts (grupo com 5 pessoas) · 42 pts (grupo com 6 pessoas)
           </div>
         </div>
       </div>

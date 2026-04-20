@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { CATEGORIAS, previewPontos } from '../lib/scoring';
-import { calculaSemanaAtual, metasDaSemana, motivoNaoPontua } from '../lib/weeks';
+import { calculaSemanaAtual, metasDaSemana, MAX_PONTOS_DIA_PESSOA, maxPontosDiaGrupo } from '../lib/weeks';
 import FotoUpload from '../components/FotoUpload';
 
 export default function Postar() {
@@ -20,17 +20,41 @@ export default function Postar() {
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState(null);
   const [postsHoje, setPostsHoje] = useState([]);
+  const [pontosHoje, setPontosHoje] = useState({ pessoa: 0, grupo: 0, tamanhoGrupo: 0 });
 
   useEffect(() => {
     if (!profile?.id) return;
     const hoje = new Date().toISOString().slice(0, 10);
+
+    // Posts da categoria (pra limite diário)
     supabase.from('posts')
       .select('*')
       .eq('user_id', profile.id)
       .eq('data_registro', hoje)
       .eq('categoria', categoria)
       .then(({ data }) => setPostsHoje(data || []));
-  }, [profile?.id, categoria]);
+
+    // Pontos totais hoje — pessoa + grupo
+    (async () => {
+      const { data: meus } = await supabase.from('posts')
+        .select('pontos').eq('user_id', profile.id).eq('status', 'approved').eq('data_registro', hoje);
+      const pessoa = (meus || []).reduce((a, x) => a + (x.pontos || 0), 0);
+
+      let grupo = 0, tamanho = 0;
+      if (profile.group_id) {
+        const { data: cohort } = await supabase.from('profiles')
+          .select('id').eq('group_id', profile.group_id);
+        tamanho = (cohort || []).length;
+        if (tamanho > 0) {
+          const ids = cohort.map(c => c.id);
+          const { data: grpPosts } = await supabase.from('posts')
+            .select('pontos').in('user_id', ids).eq('status', 'approved').eq('data_registro', hoje);
+          grupo = (grpPosts || []).reduce((a, x) => a + (x.pontos || 0), 0);
+        }
+      }
+      setPontosHoje({ pessoa, grupo, tamanhoGrupo: tamanho });
+    })();
+  }, [profile?.id, profile?.group_id, categoria]);
 
   if (!cat) return <div>Categoria inválida.</div>;
 
@@ -85,10 +109,21 @@ export default function Postar() {
         </AlertaBox>
       )}
       {semana > 3 && <AlertaBox>Desafio encerrado em 10/05.</AlertaBox>}
-      {semana >= 1 && semana <= 3 && motivoNaoPontua() && (
-        <AlertaBox>
-          📅 Hoje é <strong>{motivoNaoPontua()}</strong>. Você pode registrar mas <strong>não pontua</strong> — só dias úteis contam.
-        </AlertaBox>
+
+      {/* Celebração: bateu meta pessoal do dia */}
+      {pontosHoje.pessoa >= MAX_PONTOS_DIA_PESSOA && (
+        <CelebracaoBox tipo="pessoa" pontos={pontosHoje.pessoa} max={MAX_PONTOS_DIA_PESSOA} />
+      )}
+      {/* Celebração: time bateu meta coletiva do dia */}
+      {pontosHoje.pessoa < MAX_PONTOS_DIA_PESSOA
+        && pontosHoje.tamanhoGrupo > 0
+        && pontosHoje.grupo >= maxPontosDiaGrupo(pontosHoje.tamanhoGrupo) && (
+        <CelebracaoBox
+          tipo="grupo"
+          pontos={pontosHoje.grupo}
+          max={maxPontosDiaGrupo(pontosHoje.tamanhoGrupo)}
+          grupoNome={profile?.groups?.nome}
+        />
       )}
 
       <form onSubmit={enviar} className="card">
@@ -190,5 +225,35 @@ function AlertaBox({ children }) {
       marginBottom: 16,
       fontSize: 13,
     }}>{children}</div>
+  );
+}
+
+function CelebracaoBox({ tipo, pontos, max, grupoNome }) {
+  const titulo = tipo === 'pessoa'
+    ? '🎉 Meta pessoal do dia batida!'
+    : `🎉 Seu time ${grupoNome || ''} bateu a meta do dia!`;
+  const mensagem = tipo === 'pessoa'
+    ? `Você já somou ${pontos}/${max} pontos hoje — o máximo possível. Pode relaxar, descansar ou só incentivar a galera. Não precisa postar mais nada hoje.`
+    : `O time inteiro já somou ${pontos}/${max} pontos hoje — o máximo coletivo. Parabéns time! Pode descansar ou incentivar quem ainda tá postando.`;
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(244,204,4,0.12))',
+      border: '1px solid var(--verde)',
+      borderLeft: '4px solid var(--verde)',
+      padding: '16px 20px',
+      borderRadius: 4,
+      marginBottom: 18,
+    }}>
+      <div style={{
+        fontFamily: 'Rajdhani', fontSize: 16, fontWeight: 700,
+        color: 'var(--amarelo)', letterSpacing: 1.5, textTransform: 'uppercase',
+        marginBottom: 6,
+      }}>
+        {titulo}
+      </div>
+      <div style={{ fontSize: 13, color: '#fff', lineHeight: 1.5 }}>
+        {mensagem}
+      </div>
+    </div>
   );
 }

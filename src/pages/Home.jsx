@@ -17,19 +17,32 @@ export default function Home() {
 
   useEffect(() => {
     (async () => {
-      const { data: posts } = await supabase
-        .from('posts')
-        .select('pontos, user_id, profiles!inner(group_id)')
-        .eq('status', 'approved');
-      const { data: groups } = await supabase.from('groups').select('*').order('id');
-      if (posts && groups) {
-        const soma = Object.fromEntries(groups.map(g => [g.id, 0]));
-        for (const p of posts) {
-          const gid = p.profiles?.group_id;
-          if (gid) soma[gid] = (soma[gid] || 0) + (p.pontos || 0);
-        }
-        setRankingGrupos(groups.map(g => ({ ...g, pontos: soma[g.id] || 0 })).sort((a, b) => b.pontos - a.pontos));
+      const [postsRes, profilesRes, groupsRes] = await Promise.all([
+        supabase.from('posts').select('pontos, user_id').eq('status', 'approved'),
+        supabase.from('profiles').select('id, group_id'),
+        supabase.from('groups').select('*').order('id'),
+      ]);
+
+      const posts = postsRes.data || [];
+      const profiles = profilesRes.data || [];
+      const groups = groupsRes.data || [];
+
+      // Mapa user_id -> group_id
+      const userGroup = Object.fromEntries(profiles.map(p => [p.id, p.group_id]));
+
+      // Soma pontos por grupo
+      const soma = Object.fromEntries(groups.map(g => [g.id, 0]));
+      for (const p of posts) {
+        const gid = userGroup[p.user_id];
+        if (gid) soma[gid] = (soma[gid] || 0) + (p.pontos || 0);
       }
+
+      // Sempre lista os 5 grupos (mesmo com 0 pontos), ordenados por pontos desc
+      setRankingGrupos(
+        groups
+          .map(g => ({ ...g, pontos: soma[g.id] || 0 }))
+          .sort((a, b) => b.pontos - a.pontos)
+      );
 
       if (profile?.id) {
         const { data: meus } = await supabase.from('posts')
@@ -163,12 +176,22 @@ export default function Home() {
       {/* Ranking grupos */}
       <h3 style={{ marginBottom: 12 }}>Placar dos grupos</h3>
       <div className="card">
-        {rankingGrupos.length === 0 && (
-          <div style={{ color: 'var(--branco-45)', fontSize: 12 }}>Ainda sem pontos aprovados.</div>
+        {rankingGrupos.length === 0 ? (
+          <div style={{ color: 'var(--branco-45)', fontSize: 12 }}>Carregando grupos...</div>
+        ) : rankingGrupos.every(g => g.pontos === 0) ? (
+          <>
+            <div style={{ color: 'var(--branco-45)', fontSize: 12, marginBottom: 10, textAlign: 'center' }}>
+              Placar zerado — o desafio começa segunda 20/04.
+            </div>
+            {rankingGrupos.map((g, i) => (
+              <RankingBar key={g.id} nome={g.nome} pontos={g.pontos} max={1} cor={g.cor} posicao={i + 1} />
+            ))}
+          </>
+        ) : (
+          rankingGrupos.map((g, i) => (
+            <RankingBar key={g.id} nome={g.nome} pontos={g.pontos} max={maxPontos} cor={g.cor} posicao={i + 1} />
+          ))
         )}
-        {rankingGrupos.map((g, i) => (
-          <RankingBar key={g.id} nome={g.nome} pontos={g.pontos} max={maxPontos} cor={g.cor} posicao={i + 1} />
-        ))}
       </div>
     </div>
   );

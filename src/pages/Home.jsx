@@ -18,7 +18,7 @@ export default function Home() {
   useEffect(() => {
     (async () => {
       const [postsRes, profilesRes, groupsRes] = await Promise.all([
-        supabase.from('posts').select('pontos, user_id').eq('status', 'approved'),
+        supabase.from('posts').select('pontos, user_id, categoria').eq('status', 'approved'),
         supabase.from('profiles').select('id, group_id'),
         supabase.from('groups').select('*').order('id'),
       ]);
@@ -31,23 +31,29 @@ export default function Home() {
       const userGroup = Object.fromEntries(profiles.map(p => [p.id, p.group_id]));
 
       // Soma pontos por grupo
-      const soma = Object.fromEntries(groups.map(g => [g.id, 0]));
+      const somaGrupo = Object.fromEntries(groups.map(g => [g.id, 0]));
+      // Pontos por usuario, quebrado por categoria
+      const porUser = {}; // { user_id: { energia, movimento, mental, total } }
+
       for (const p of posts) {
-        const gid = userGroup[p.user_id];
-        if (gid) soma[gid] = (soma[gid] || 0) + (p.pontos || 0);
+        const uid = p.user_id;
+        const pts = p.pontos || 0;
+        const gid = userGroup[uid];
+        if (gid) somaGrupo[gid] = (somaGrupo[gid] || 0) + pts;
+        if (!porUser[uid]) porUser[uid] = { energia: 0, movimento: 0, mental: 0, total: 0 };
+        porUser[uid][p.categoria] = (porUser[uid][p.categoria] || 0) + pts;
+        porUser[uid].total += pts;
       }
 
       // Sempre lista os 5 grupos (mesmo com 0 pontos), ordenados por pontos desc
       setRankingGrupos(
         groups
-          .map(g => ({ ...g, pontos: soma[g.id] || 0 }))
+          .map(g => ({ ...g, pontos: somaGrupo[g.id] || 0 }))
           .sort((a, b) => b.pontos - a.pontos)
       );
 
       if (profile?.id) {
-        const { data: meus } = await supabase.from('posts')
-          .select('pontos').eq('user_id', profile.id).eq('status', 'approved');
-        setMeusPontos((meus || []).reduce((a, x) => a + (x.pontos || 0), 0));
+        setMeusPontos(porUser[profile.id]?.total || 0);
       }
 
       // Colegas do mesmo grupo (profiles já cadastrados) + pending_claims (ainda não logaram)
@@ -64,8 +70,20 @@ export default function Home() {
             .is('claimed_by', null)
             .order('nome_exibicao'),
         ]);
-        const ativos = (prof.data || []).map(p => ({ nome: p.nome_exibicao, ativo: true, id: p.id }));
-        const pendentes = (pend.data || []).map(p => ({ nome: p.nome_exibicao, ativo: false, id: `pc-${p.id}` }));
+        const ativos = (prof.data || []).map(p => ({
+          nome: p.nome_exibicao,
+          ativo: true,
+          id: p.id,
+          pontos: porUser[p.id] || { energia: 0, movimento: 0, mental: 0, total: 0 },
+        }));
+        const pendentes = (pend.data || []).map(p => ({
+          nome: p.nome_exibicao,
+          ativo: false,
+          id: `pc-${p.id}`,
+          pontos: { energia: 0, movimento: 0, mental: 0, total: 0 },
+        }));
+        // Ordena: ativos por pontos desc, pending no final
+        ativos.sort((a, b) => b.pontos.total - a.pontos.total);
         setColegas([...ativos, ...pendentes]);
       }
     })();
@@ -137,37 +155,84 @@ export default function Home() {
         <>
           <h3 style={{ marginBottom: 12 }}>Seu time — {profile.groups.nome}</h3>
           <div className="card" style={{ borderTopColor: profile.groups.cor, marginBottom: 26 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
-              {colegas.map(c => {
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 }}>
+              {colegas.map((c, idx) => {
                 const souEu = c.id === profile.id;
+                // posicao entre ativos (pending nao entra no ranking)
+                const posicao = c.ativo ? colegas.filter(x => x.ativo).indexOf(c) + 1 : null;
                 return (
                   <div key={c.id} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '8px 12px',
+                    padding: '10px 12px',
                     background: souEu ? 'var(--amarelo-soft)' : 'rgba(255,255,255,0.03)',
                     borderRadius: 3,
                     borderLeft: `2px solid ${souEu ? 'var(--amarelo)' : profile.groups.cor}`,
                   }}>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: '50%',
-                      background: profile.groups.cor,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: 'var(--azul)', fontWeight: 700, fontSize: 12,
-                      fontFamily: 'Rajdhani',
-                      opacity: c.ativo ? 1 : 0.5,
-                    }}>
-                      {c.nome.charAt(0).toUpperCase()}
+                    {/* Linha 1: avatar + nome */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{
+                        width: 30, height: 30, borderRadius: '50%',
+                        background: profile.groups.cor,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: 'var(--azul)', fontWeight: 700, fontSize: 13,
+                        fontFamily: 'Rajdhani',
+                        opacity: c.ativo ? 1 : 0.5,
+                        flexShrink: 0,
+                      }}>
+                        {c.nome.charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ fontSize: 13, color: c.ativo ? '#fff' : 'var(--branco-45)', flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {posicao && (
+                            <span style={{
+                              fontFamily: 'Rajdhani', fontWeight: 700, fontSize: 10,
+                              color: 'var(--branco-45)', letterSpacing: 1,
+                            }}>
+                              #{posicao}
+                            </span>
+                          )}
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nome}</span>
+                          {souEu && <span style={{ color: 'var(--amarelo)', fontSize: 9, letterSpacing: 1, fontWeight: 700 }}>VOCÊ</span>}
+                        </div>
+                        {!c.ativo && <div style={{ fontSize: 9, color: 'var(--branco-45)', letterSpacing: 1 }}>ainda não logou</div>}
+                      </div>
+                      {c.ativo && (
+                        <div style={{
+                          fontFamily: 'Rajdhani', fontSize: 16, fontWeight: 700,
+                          color: 'var(--amarelo)', flexShrink: 0,
+                        }}>
+                          {c.pontos.total}
+                          <span style={{ fontSize: 10, marginLeft: 2, color: 'var(--branco-45)' }}>pts</span>
+                        </div>
+                      )}
                     </div>
-                    <div style={{ fontSize: 13, color: c.ativo ? '#fff' : 'var(--branco-45)' }}>
-                      {c.nome}
-                      {souEu && <span style={{ color: 'var(--amarelo)', fontSize: 10, marginLeft: 6, letterSpacing: 1 }}>VOCÊ</span>}
-                      {!c.ativo && <div style={{ fontSize: 9, color: 'var(--branco-45)', letterSpacing: 1 }}>ainda não logou</div>}
-                    </div>
+
+                    {/* Linha 2: breakdown por categoria (só pra ativos) */}
+                    {c.ativo && (
+                      <div style={{
+                        display: 'flex', gap: 10, marginTop: 6,
+                        fontSize: 11, color: 'var(--branco-70)',
+                        paddingLeft: 40,
+                      }}>
+                        <span title="Energia (frutas)">🍎 {c.pontos.energia}</span>
+                        <span title="Movimento (exercício)">🏃 {c.pontos.movimento}</span>
+                        <span title="Controle mental (meditação)">🧠 {c.pontos.mental}</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
+            </div>
+            <div style={{
+              fontSize: 10, color: 'var(--branco-45)',
+              marginTop: 12, paddingTop: 10,
+              borderTop: '1px solid rgba(255,255,255,0.05)',
+              textAlign: 'center', letterSpacing: 1,
+              fontFamily: 'Rajdhani', fontWeight: 600, textTransform: 'uppercase',
+            }}>
+              Incentive quem está abaixo 💪 · ordenado por pontos
             </div>
           </div>
         </>

@@ -15,8 +15,30 @@ export const METAS = {
 // 2 frutas (+2) + 1 movimento na meta (+3) + 1 mental na meta (+2) = 7 pts
 export const MAX_PONTOS_DIA_PESSOA = 7;
 
-export function maxPontosDiaGrupo(tamanhoGrupo) {
-  return (tamanhoGrupo || 0) * MAX_PONTOS_DIA_PESSOA;
+// Cap fixo por grupo por dia (equidade entre grupos de 5 e 6 pessoas).
+// Assume cenario-base: 5 pessoas * 7 pts = 35 pts/dia.
+export const MAX_PONTOS_DIA_GRUPO = 35;
+
+export function maxPontosDiaGrupo(/* tamanhoGrupo ignorado */) {
+  return MAX_PONTOS_DIA_GRUPO;
+}
+
+// Aplica cap diario nos pontos do grupo. Soma pontos por dia_registro,
+// limita cada dia ao cap, retorna total e pontos de hoje.
+export function aplicarCapDiarioGrupo(postsDoGrupo, hojeIso) {
+  const porDia = {};
+  for (const p of postsDoGrupo) {
+    const d = p.data_registro;
+    porDia[d] = (porDia[d] || 0) + (p.pontos || 0);
+  }
+  let total = 0;
+  let totalHoje = 0;
+  for (const [data, pts] of Object.entries(porDia)) {
+    const capped = Math.min(pts, MAX_PONTOS_DIA_GRUPO);
+    total += capped;
+    if (data === hojeIso) totalHoje = capped;
+  }
+  return { total, totalHoje };
 }
 
 function daysBetween(a, b) {
@@ -58,6 +80,6 @@ export function maxAcumuladoPessoa(hoje = new Date()) {
   return diasDecorridos(hoje) * MAX_PONTOS_DIA_PESSOA;
 }
 
-export function maxAcumuladoGrupo(tamanhoGrupo, hoje = new Date()) {
-  return diasDecorridos(hoje) * maxPontosDiaGrupo(tamanhoGrupo);
+export function maxAcumuladoGrupo(_tamanhoIgnorado, hoje = new Date()) {
+  return diasDecorridos(hoje) * MAX_PONTOS_DIA_GRUPO;
 }

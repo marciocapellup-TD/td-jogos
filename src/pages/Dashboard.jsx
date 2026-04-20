@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend, CartesianGrid } from 'recharts';
-import { DATA_INICIO, diasDecorridos } from '../lib/weeks';
+import { DATA_INICIO, diasDecorridos, MAX_PONTOS_DIA_GRUPO } from '../lib/weeks';
 import { CATEGORIAS } from '../lib/scoring';
 import RankingBar from '../components/RankingBar';
 import StatCard from '../components/StatCard';
@@ -38,7 +38,6 @@ export default function Dashboard() {
     const { posts, profiles, groups } = data;
     const prefById = Object.fromEntries(profiles.map(p => [p.id, p]));
 
-    const somaGrp = Object.fromEntries(groups.map(g => [g.id, 0]));
     const somaUser = {};
     const catGrp = Object.fromEntries(groups.map(g => [g.id, { energia: 0, movimento: 0, mental: 0 }]));
     const dia = {};
@@ -49,7 +48,6 @@ export default function Dashboard() {
       const prof = prefById[uid];
       const gid = prof?.group_id;
       if (gid) {
-        somaGrp[gid] = (somaGrp[gid] || 0) + (p.pontos || 0);
         catGrp[gid][p.categoria] = (catGrp[gid][p.categoria] || 0) + 1;
       }
       somaUser[uid] = (somaUser[uid] || 0) + (p.pontos || 0);
@@ -57,6 +55,14 @@ export default function Dashboard() {
       dia[dataStr] = dia[dataStr] || Object.fromEntries(groups.map(g => [g.id, 0]));
       if (gid) dia[dataStr][gid] += p.pontos || 0;
       atividadeCat[p.categoria][uid] = (atividadeCat[p.categoria][uid] || 0) + 1;
+    }
+
+    // Pontos do grupo com cap diario de 35 (equidade entre grupos de 5 e 6)
+    const somaGrp = Object.fromEntries(groups.map(g => [g.id, 0]));
+    for (const [_data, porGrupo] of Object.entries(dia)) {
+      for (const g of groups) {
+        somaGrp[g.id] += Math.min(porGrupo[g.id] || 0, MAX_PONTOS_DIA_GRUPO);
+      }
     }
 
     const rankingGrupos = groups.map(g => ({
@@ -85,13 +91,13 @@ export default function Dashboard() {
       Mental: catGrp[g.id].mental,
     }));
 
-    // Série temporal acumulada por grupo
+    // Série temporal acumulada por grupo (com cap diário)
     const datas = Object.keys(dia).sort();
     const acum = Object.fromEntries(groups.map(g => [g.id, 0]));
     const serieTemporal = datas.map(d => {
       const row = { data: d.slice(5).replace('-', '/') };
       for (const g of groups) {
-        acum[g.id] += dia[d][g.id] || 0;
+        acum[g.id] += Math.min(dia[d][g.id] || 0, MAX_PONTOS_DIA_GRUPO);
         row[g.nome] = acum[g.id];
       }
       return row;

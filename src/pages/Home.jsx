@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
-import { calculaSemanaAtual, metasDaSemana, diasRestantes, diasDecorridos, MAX_PONTOS_DIA_PESSOA, maxPontosDiaGrupo, maxAcumuladoPessoa, maxAcumuladoGrupo } from '../lib/weeks';
+import { calculaSemanaAtual, metasDaSemana, diasRestantes, diasDecorridos, MAX_PONTOS_DIA_PESSOA, MAX_PONTOS_DIA_GRUPO, maxAcumuladoGrupo, aplicarCapDiarioGrupo } from '../lib/weeks';
 import { CATEGORIAS } from '../lib/scoring';
 import StatCard from '../components/StatCard';
 import RankingBar from '../components/RankingBar';
@@ -36,38 +36,35 @@ export default function Home() {
         if (p.group_id) tamanhoGrupo[p.group_id] = (tamanhoGrupo[p.group_id] || 0) + 1;
       }
 
-      // Soma pontos por grupo (total acumulado)
-      const somaGrupo = Object.fromEntries(groups.map(g => [g.id, 0]));
-      const somaGrupoHoje = Object.fromEntries(groups.map(g => [g.id, 0]));
-      // Pontos por usuario
+      // Agrupa posts por grupo (pro cap diário)
+      const postsPorGrupo = Object.fromEntries(groups.map(g => [g.id, []]));
       const porUser = {}; // { user_id: { energia, movimento, mental, total, hoje } }
 
       for (const p of posts) {
         const uid = p.user_id;
-        const pts = p.pontos || 0;
         const gid = userGroup[uid];
         const ehHoje = p.data_registro === hoje;
-        if (gid) {
-          somaGrupo[gid] += pts;
-          if (ehHoje) somaGrupoHoje[gid] += pts;
-        }
+        if (gid) postsPorGrupo[gid].push(p);
         if (!porUser[uid]) porUser[uid] = { energia: 0, movimento: 0, mental: 0, total: 0, hoje: 0 };
-        porUser[uid][p.categoria] += pts;
-        porUser[uid].total += pts;
-        if (ehHoje) porUser[uid].hoje += pts;
+        porUser[uid][p.categoria] += (p.pontos || 0);
+        porUser[uid].total += (p.pontos || 0);
+        if (ehHoje) porUser[uid].hoje += (p.pontos || 0);
       }
 
-      // Sempre lista os 5 grupos (mesmo com 0 pontos), ordenados por pontos desc
+      // Aplica cap diário de 35 pts pra cada grupo
       setRankingGrupos(
         groups
-          .map(g => ({
-            ...g,
-            pontos: somaGrupo[g.id] || 0,
-            pontosHoje: somaGrupoHoje[g.id] || 0,
-            maxHoje: maxPontosDiaGrupo(tamanhoGrupo[g.id]),
-            maxAcumulado: maxAcumuladoGrupo(tamanhoGrupo[g.id]),
-            tamanho: tamanhoGrupo[g.id],
-          }))
+          .map(g => {
+            const capped = aplicarCapDiarioGrupo(postsPorGrupo[g.id] || [], hoje);
+            return {
+              ...g,
+              pontos: capped.total,
+              pontosHoje: capped.totalHoje,
+              maxHoje: MAX_PONTOS_DIA_GRUPO,
+              maxAcumulado: maxAcumuladoGrupo(null),
+              tamanho: tamanhoGrupo[g.id],
+            };
+          })
           .sort((a, b) => b.pontos - a.pontos)
       );
 

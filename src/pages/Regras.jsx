@@ -101,10 +101,10 @@ export default function Regras() {
           Pode postar no fim de semana anterior (18-19/04) mas <strong>os pontos só contam a partir de segunda 20/04</strong>.
         </Regra>
         <Regra emoji="🚫" titulo="Limite diário">
-          <strong>1 movimento</strong> + <strong>1 mental</strong> + até <strong>2 frutas</strong> por dia. Máximo de <strong>7 pts/dia por pessoa</strong> e <strong>N × 7 pts/dia por grupo</strong> (N = tamanho do grupo).
+          <strong>1 movimento</strong> + <strong>1 mental</strong> + até <strong>2 frutas</strong> por dia. Máximo de <strong>7 pts/dia por pessoa</strong> e <strong>35 pts/dia por grupo</strong> (equidade — mesmo teto pra grupos de 5 e 6 pessoas).
         </Regra>
         <Regra emoji="🎉" titulo="Bateu a meta do dia?">
-          Quando você somar <strong>7 pts no dia</strong> (ou quando seu time somar o máximo coletivo), aparece uma mensagem de parabéns e <strong>você não precisa postar mais</strong> — pode descansar.
+          Quando você somar <strong>7 pts no dia</strong> (ou seu time somar 35), aparece uma mensagem de parabéns e <strong>você não precisa postar mais</strong> — pode descansar.
         </Regra>
         <Regra emoji="✅" titulo="Aprovação manual">
           Todo post fica <strong>pendente</strong> até o admin aprovar. Pontos só entram no placar depois da aprovação.
@@ -146,7 +146,8 @@ export default function Regras() {
           <div style={{
             marginTop: 6, fontSize: 11, color: 'var(--branco-45)',
           }}>
-            Máximo por dia: 7 pts (pessoa) · 35 pts (grupo com 5 pessoas) · 42 pts (grupo com 6 pessoas)
+            Máximo por dia: 7 pts (pessoa) · 35 pts (grupo — igual pra todos).<br />
+            Máximo acumulado em 21 dias: <strong>147 pts</strong> (pessoa) · <strong>735 pts</strong> (grupo).
           </div>
         </div>
       </div>

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { CATEGORIAS, previewPontos } from '../lib/scoring';
-import { calculaSemanaAtual, metasDaSemana, MAX_PONTOS_DIA_PESSOA, maxPontosDiaGrupo } from '../lib/weeks';
+import { calculaSemanaAtual, metasDaSemana, MAX_PONTOS_DIA_PESSOA, MAX_PONTOS_DIA_GRUPO } from '../lib/weeks';
 import FotoUpload from '../components/FotoUpload';
 
 export default function Postar() {
@@ -155,14 +155,13 @@ export default function Postar() {
       {pontosHoje.pessoa >= MAX_PONTOS_DIA_PESSOA && (
         <CelebracaoBox tipo="pessoa" pontos={pontosHoje.pessoa} max={MAX_PONTOS_DIA_PESSOA} />
       )}
-      {/* Celebração: time bateu meta coletiva do dia */}
+      {/* Celebração: time bateu meta coletiva do dia (cap 35 igual pra todos) */}
       {pontosHoje.pessoa < MAX_PONTOS_DIA_PESSOA
-        && pontosHoje.tamanhoGrupo > 0
-        && pontosHoje.grupo >= maxPontosDiaGrupo(pontosHoje.tamanhoGrupo) && (
+        && pontosHoje.grupo >= MAX_PONTOS_DIA_GRUPO && (
         <CelebracaoBox
           tipo="grupo"
-          pontos={pontosHoje.grupo}
-          max={maxPontosDiaGrupo(pontosHoje.tamanhoGrupo)}
+          pontos={Math.min(pontosHoje.grupo, MAX_PONTOS_DIA_GRUPO)}
+          max={MAX_PONTOS_DIA_GRUPO}
           grupoNome={profile?.groups?.nome}
         />
       )}

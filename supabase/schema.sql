@@ -47,6 +47,7 @@ create table if not exists posts (
   reviewed_by uuid references profiles(id),
   reviewed_at timestamptz,
   motivo_reprovacao text,
+  foto_liberada boolean not null default false,
   created_at timestamptz default now(),
   constraint chk_energia check (
     categoria != 'energia' or (quantidade_frutas is not null and minutos is null)

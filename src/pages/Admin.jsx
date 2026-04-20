@@ -435,9 +435,25 @@ function Aprovados() {
   const liberarFoto = async (p) => {
     if (!confirm('Apagar só a foto do armazenamento? O post e os pontos continuam preservados.\n\nÚtil quando o Storage está cheio.')) return;
     const path = extractStoragePath(p.foto_url);
-    if (!path) { alert('URL da foto não parece ser do bucket postagens.'); return; }
-    const { error } = await supabase.storage.from('postagens').remove([path]);
-    if (error) { alert('Erro ao apagar foto: ' + error.message); return; }
+
+    // Apaga do storage (se o path puder ser extraído)
+    if (path) {
+      const { data, error } = await supabase.storage.from('postagens').remove([path]);
+      if (error) {
+        console.error('[liberarFoto] storage erro:', error);
+        alert('Falha ao apagar do storage: ' + error.message);
+        return;
+      }
+      console.log('[liberarFoto] removido:', data);
+    }
+
+    // Marca no banco pra UI mostrar placeholder independente de cache do browser
+    const { error: updErr } = await supabase
+      .from('posts')
+      .update({ foto_liberada: true })
+      .eq('id', p.id);
+    if (updErr) { alert('Erro ao marcar post: ' + updErr.message); return; }
+
     carregar();
   };
 

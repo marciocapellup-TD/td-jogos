@@ -14,6 +14,15 @@ const CHART_TOOLTIP_STYLE = {
   fontSize: 12,
 };
 
+// Ordena ranking: pontos desc; empate -> quem chegou primeiro (reviewed_at asc)
+function ordenarRanking(a, b) {
+  if (b.pontos !== a.pontos) return b.pontos - a.pontos;
+  if (!a.ultimoReviewedAt && !b.ultimoReviewedAt) return 0;
+  if (!a.ultimoReviewedAt) return 1;
+  if (!b.ultimoReviewedAt) return -1;
+  return a.ultimoReviewedAt < b.ultimoReviewedAt ? -1 : 1;
+}
+
 export default function Dashboard() {
   const [data, setData] = useState({ posts: [], profiles: [], groups: [] });
   const [loading, setLoading] = useState(true);
@@ -22,7 +31,7 @@ export default function Dashboard() {
     (async () => {
       const [postsRes, profRes, groupRes] = await Promise.all([
         supabase.from('posts').select('*').eq('status', 'approved'),
-        supabase.from('profiles').select('id, nome_exibicao, group_id'),
+        supabase.from('profiles').select('id, nome_exibicao, group_id').order('nome_exibicao'),
         supabase.from('groups').select('*').order('id'),
       ]);
       setData({
@@ -39,6 +48,8 @@ export default function Dashboard() {
     const prefById = Object.fromEntries(profiles.map(p => [p.id, p]));
 
     const somaUser = {};
+    const ultimoUser = {}; // desempate: maior reviewed_at (com pontos > 0)
+    const ultimoGrupo = Object.fromEntries(groups.map(g => [g.id, null]));
     const catGrp = Object.fromEntries(groups.map(g => [g.id, { energia: 0, movimento: 0, mental: 0 }]));
     const dia = {};
     const atividadeCat = { energia: {}, movimento: {}, mental: {} };
@@ -47,13 +58,18 @@ export default function Dashboard() {
       const uid = p.user_id;
       const prof = prefById[uid];
       const gid = prof?.group_id;
+      const pts = p.pontos || 0;
       if (gid) {
         catGrp[gid][p.categoria] = (catGrp[gid][p.categoria] || 0) + 1;
       }
-      somaUser[uid] = (somaUser[uid] || 0) + (p.pontos || 0);
+      somaUser[uid] = (somaUser[uid] || 0) + pts;
+      if (pts > 0 && p.reviewed_at) {
+        if (!ultimoUser[uid] || p.reviewed_at > ultimoUser[uid]) ultimoUser[uid] = p.reviewed_at;
+        if (gid && (!ultimoGrupo[gid] || p.reviewed_at > ultimoGrupo[gid])) ultimoGrupo[gid] = p.reviewed_at;
+      }
       const dataStr = p.data_registro;
       dia[dataStr] = dia[dataStr] || Object.fromEntries(groups.map(g => [g.id, 0]));
-      if (gid) dia[dataStr][gid] += p.pontos || 0;
+      if (gid) dia[dataStr][gid] += pts;
       atividadeCat[p.categoria][uid] = (atividadeCat[p.categoria][uid] || 0) + 1;
     }
 
@@ -68,7 +84,8 @@ export default function Dashboard() {
     const rankingGrupos = groups.map(g => ({
       ...g,
       pontos: somaGrp[g.id] || 0,
-    })).sort((a, b) => b.pontos - a.pontos);
+      ultimoReviewedAt: ultimoGrupo[g.id],
+    })).sort(ordenarRanking);
 
     const rankingIndivFull = profiles.map(p => {
       const g = groups.find(gg => gg.id === p.group_id);
@@ -79,8 +96,9 @@ export default function Dashboard() {
         group_id: p.group_id,
         cor: g?.cor,
         pontos: somaUser[p.id] || 0,
+        ultimoReviewedAt: ultimoUser[p.id] || null,
       };
-    }).sort((a, b) => b.pontos - a.pontos);
+    }).sort(ordenarRanking);
 
     const rankingIndiv = rankingIndivFull.slice(0, 10);
 
@@ -218,7 +236,7 @@ export default function Dashboard() {
 
 function GrupoExpandido({ grupo, posicao, max, membros }) {
   const [aberto, setAberto] = useState(false);
-  const membrosOrdenados = [...membros].sort((a, b) => b.pontos - a.pontos);
+  const membrosOrdenados = [...membros].sort(ordenarRanking);
 
   return (
     <div style={{ marginBottom: 10 }}>

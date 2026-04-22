@@ -16,7 +16,7 @@ export default function Postar() {
   const metas = metasDaSemana(semana);
 
   const [quantidadeFrutas, setQuantidadeFrutas] = useState(1);
-  const [minutos, setMinutos] = useState('');
+  const [duracao, setDuracao] = useState('');
   const [fotoUrl, setFotoUrl] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState(null);
@@ -87,8 +87,11 @@ export default function Postar() {
                  || jaPostouMovMental
                  || semana > 3;
 
+  const { minutos: minParsed, segundos: segParsed, valido: duracaoValida } = parseDuracao(duracao);
+
   const pontosPreview = previewPontos(categoria, {
-    minutos: Number(minutos) || 0,
+    minutos: minParsed,
+    segundos: segParsed,
     quantidade_frutas: Number(quantidadeFrutas) || 0,
   });
 
@@ -96,9 +99,10 @@ export default function Postar() {
     e.preventDefault();
     setErro(null);
     if (!fotoUrl) { setErro('Envie a foto antes de postar.'); return; }
-    if (categoria !== 'energia' && (!minutos || Number(minutos) < 1)) {
-      setErro('Informe os minutos.');
-      return;
+    if (categoria !== 'energia') {
+      if (!duracao.trim()) { setErro('Informe a duração no formato MM:SS.'); return; }
+      if (!duracaoValida) { setErro('Formato inválido. Use MM:SS (ex: 8:37).'); return; }
+      if (minParsed === 0 && segParsed === 0) { setErro('A duração precisa ser maior que zero.'); return; }
     }
 
     setEnviando(true);
@@ -110,7 +114,7 @@ export default function Postar() {
       data_registro: hojeISO(), // força data local BR em vez de current_date UTC
       ...(categoria === 'energia'
         ? { quantidade_frutas: Number(quantidadeFrutas) }
-        : { minutos: Number(minutos) }),
+        : { minutos: minParsed, segundos: segParsed }),
     };
     const { error } = await supabase.from('posts').insert(payload);
     setEnviando(false);
@@ -193,16 +197,21 @@ export default function Postar() {
 
         {categoria !== 'energia' && (
           <div className="form-group">
-            <label>Minutos registrados no app</label>
+            <label>Duração registrada no app (MM:SS)</label>
             <input
               className="input"
-              type="number"
-              min="1"
-              max="999"
-              value={minutos}
-              onChange={e => setMinutos(e.target.value)}
-              placeholder={`Meta da semana ${semana || '?'}: ${categoria === 'movimento' ? metas?.movimento.minutos : metas?.mental.minutos} min`}
+              type="text"
+              inputMode="numeric"
+              maxLength="6"
+              value={duracao}
+              onChange={e => setDuracao(formatarEntradaDuracao(e.target.value))}
+              placeholder={`Meta semana ${semana || '?'}: ${categoria === 'movimento' ? metas?.movimento.minutos : metas?.mental.minutos}:00 — ex: 8:37`}
             />
+            {duracao && !duracaoValida && (
+              <div style={{ fontSize: 11, color: 'var(--vermelho)', marginTop: 6 }}>
+                Formato inválido. Use MM:SS (ex: 8:37).
+              </div>
+            )}
             {jaPostouMovMental && (
               <div style={{ fontSize: 11, color: 'var(--vermelho)', marginTop: 6 }}>
                 Você já registrou {cat.label.toLowerCase()} hoje.
@@ -225,7 +234,7 @@ export default function Postar() {
           fontFamily: 'Rajdhani', fontSize: 13, letterSpacing: 1,
         }}>
           Se aprovado, você ganha <strong style={{ color: 'var(--amarelo)', fontSize: 18 }}>+{pontosPreview} pt</strong>
-          {pontosPreview === 0 && categoria !== 'energia' && minutos && (
+          {pontosPreview === 0 && categoria !== 'energia' && duracaoValida && (minParsed > 0 || segParsed > 0) && (
             <div style={{ fontSize: 11, color: 'var(--vermelho)', letterSpacing: 0, marginTop: 4 }}>
               (abaixo da meta da semana — sem pontos, mas pode postar assim mesmo)
             </div>
@@ -254,6 +263,32 @@ export default function Postar() {
       </form>
     </div>
   );
+}
+
+// Parse "MM:SS" ou "MM" → { minutos, segundos, valido }
+function parseDuracao(str) {
+  const s = (str || '').trim();
+  if (!s) return { minutos: 0, segundos: 0, valido: false };
+  const partes = s.split(':');
+  if (partes.length > 2) return { minutos: 0, segundos: 0, valido: false };
+  const min = Number(partes[0]);
+  const seg = partes.length === 2 ? Number(partes[1]) : 0;
+  if (!Number.isFinite(min) || !Number.isFinite(seg)) return { minutos: 0, segundos: 0, valido: false };
+  if (min < 0 || min > 999) return { minutos: 0, segundos: 0, valido: false };
+  if (seg < 0 || seg > 59) return { minutos: 0, segundos: 0, valido: false };
+  return { minutos: Math.floor(min), segundos: Math.floor(seg), valido: true };
+}
+
+// Formata entrada do usuário: só aceita dígitos e ":", injeta ":" automático após 2 dígitos se ainda não tiver
+function formatarEntradaDuracao(valor) {
+  const limpo = (valor || '').replace(/[^\d:]/g, '');
+  if (!limpo.includes(':') && limpo.length > 2) {
+    return limpo.slice(0, -2) + ':' + limpo.slice(-2, limpo.length);
+  }
+  const partes = limpo.split(':');
+  if (partes.length > 2) return partes[0] + ':' + partes.slice(1).join('').slice(0, 2);
+  if (partes[1] && partes[1].length > 2) return partes[0] + ':' + partes[1].slice(0, 2);
+  return limpo;
 }
 
 function AlertaBox({ children }) {

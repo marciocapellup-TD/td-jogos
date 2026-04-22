@@ -41,6 +41,7 @@ create table if not exists posts (
   data_registro date not null default current_date,
   quantidade_frutas smallint check (quantidade_frutas between 1 and 2),
   minutos smallint check (minutos > 0),
+  segundos smallint not null default 0 check (segundos >= 0 and segundos < 60),
   foto_url text not null,
   pontos smallint not null default 0,
   status text not null default 'pending' check (status in ('pending','approved','rejected')),

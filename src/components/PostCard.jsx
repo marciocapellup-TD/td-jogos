@@ -1,6 +1,13 @@
 import { CATEGORIAS } from '../lib/scoring';
 import { formatarDataBR } from '../lib/dates';
 
+function formatarDuracao(minutos, segundos) {
+  const min = Number(minutos) || 0;
+  const seg = Number(segundos) || 0;
+  if (seg === 0) return `${min} min`;
+  return `${min}min ${String(seg).padStart(2, '0')}s`;
+}
+
 export default function PostCard({ post, children }) {
   const cat = CATEGORIAS[post.categoria];
   const statusBadge = {
@@ -69,7 +76,7 @@ export default function PostCard({ post, children }) {
 
       <div style={{ fontSize: 12, color: 'var(--branco-70)' }}>
         {post.categoria === 'energia' && <>🍎 {post.quantidade_frutas} fruta{post.quantidade_frutas > 1 ? 's' : ''}</>}
-        {post.categoria !== 'energia' && post.minutos && <>⏱️ {post.minutos} minuto{post.minutos > 1 ? 's' : ''}</>}
+        {post.categoria !== 'energia' && post.minutos != null && <>⏱️ {formatarDuracao(post.minutos, post.segundos)}</>}
       </div>
 
       {post.status === 'rejected' && post.motivo_reprovacao && (

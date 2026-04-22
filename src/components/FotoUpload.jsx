@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 export default function FotoUpload({ userId, onUploaded }) {
@@ -7,8 +7,10 @@ export default function FotoUpload({ userId, onUploaded }) {
   const [erro, setErro] = useState(null);
   const [sucesso, setSucesso] = useState(false);
 
-  const onChange = async (e) => {
-    const file = e.target.files?.[0];
+  const inputCamera = useRef(null);
+  const inputGaleria = useRef(null);
+
+  const processar = async (file) => {
     if (!file) return;
     setErro(null);
     setSucesso(false);
@@ -47,60 +49,94 @@ export default function FotoUpload({ userId, onUploaded }) {
     onUploaded(data.publicUrl);
   };
 
+  const onChangeCamera  = (e) => processar(e.target.files?.[0]);
+  const onChangeGaleria = (e) => processar(e.target.files?.[0]);
+
   return (
     <div>
-      <label className="foto-upload-box" style={{ display: 'block', cursor: 'pointer' }}>
-        {preview ? (
-          <div style={{ position: 'relative' }}>
-            <img src={preview} alt="preview" style={{ width: '100%', maxHeight: 280, objectFit: 'cover', borderRadius: 3 }} />
-            {sucesso && (
-              <div style={{
-                position: 'absolute',
-                top: 8, right: 8,
-                background: 'var(--verde)',
-                color: '#fff',
-                padding: '3px 10px',
-                borderRadius: 3,
-                fontSize: 10,
-                fontFamily: 'Rajdhani',
-                fontWeight: 700,
-                letterSpacing: 1.5,
-                textTransform: 'uppercase',
-              }}>
-                ✓ Enviada
-              </div>
-            )}
+      {/* Inputs escondidos — um força câmera, outro file picker padrão */}
+      <input
+        ref={inputCamera}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={onChangeCamera}
+        style={{ display: 'none' }}
+      />
+      <input
+        ref={inputGaleria}
+        type="file"
+        accept="image/*"
+        onChange={onChangeGaleria}
+        style={{ display: 'none' }}
+      />
+
+      {/* Preview da foto escolhida */}
+      {preview && (
+        <div style={{ position: 'relative', marginBottom: 10 }}>
+          <img
+            src={preview}
+            alt="preview"
+            style={{ width: '100%', maxHeight: 280, objectFit: 'cover', borderRadius: 3 }}
+          />
+          {sucesso && (
             <div style={{
-              position: 'absolute', bottom: 8, right: 8,
-              background: 'rgba(0,0,0,0.6)', color: '#fff',
-              padding: '4px 10px', borderRadius: 3, fontSize: 10, fontFamily: 'Rajdhani', letterSpacing: 1,
+              position: 'absolute',
+              top: 8, right: 8,
+              background: 'var(--verde)', color: '#fff',
+              padding: '3px 10px', borderRadius: 3,
+              fontSize: 10, fontFamily: 'Rajdhani', fontWeight: 700,
+              letterSpacing: 1.5, textTransform: 'uppercase',
             }}>
-              Toque para trocar
+              ✓ Enviada
             </div>
-          </div>
-        ) : (
-          <div style={{
-            border: '1px dashed var(--amarelo-dim)',
-            borderRadius: 3,
-            padding: '40px 16px',
-            textAlign: 'center',
-            background: 'var(--amarelo-soft)',
-          }}>
-            <div style={{ fontSize: 30, marginBottom: 8 }}>📷</div>
-            <div className="label">Toque para anexar foto</div>
-            <div style={{ fontSize: 10, color: 'var(--branco-45)', marginTop: 6, letterSpacing: 1 }}>
-              Câmera ou galeria
-            </div>
-          </div>
-        )}
-        <input
-          type="file"
-          accept="image/*"
-          onChange={onChange}
-          style={{ display: 'none' }}
-        />
-      </label>
-      {uploading && <div style={{ marginTop: 8, color: 'var(--amarelo)', fontSize: 12 }}>Enviando...</div>}
+          )}
+        </div>
+      )}
+
+      {/* 2 botões explícitos */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={() => inputCamera.current?.click()}
+          disabled={uploading}
+          style={{ padding: '14px 10px', display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <span style={{ fontSize: 20 }}>📷</span>
+          <span style={{ fontSize: 11, letterSpacing: 1 }}>
+            {preview ? 'Tirar outra' : 'Tirar foto'}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={() => inputGaleria.current?.click()}
+          disabled={uploading}
+          style={{ padding: '14px 10px', display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <span style={{ fontSize: 20 }}>🖼️</span>
+          <span style={{ fontSize: 11, letterSpacing: 1 }}>
+            {preview ? 'Escolher outra' : 'Enviar do dispositivo'}
+          </span>
+        </button>
+      </div>
+
+      {!preview && (
+        <div style={{
+          fontSize: 11, color: 'var(--branco-45)',
+          marginTop: 8, textAlign: 'center', letterSpacing: 0.5,
+        }}>
+          Tire uma foto agora ou envie do celular, notebook ou tablet
+        </div>
+      )}
+
+      {uploading && (
+        <div style={{ marginTop: 10, color: 'var(--amarelo)', fontSize: 12, textAlign: 'center' }}>
+          Enviando...
+        </div>
+      )}
       {erro && (
         <div style={{
           marginTop: 10,

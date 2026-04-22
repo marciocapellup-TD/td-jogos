@@ -1,15 +1,16 @@
 import { METAS, calculaSemanaAtual } from './weeks';
 
 // Prever os pontos que um post ganharia se aprovado. Só para exibição no formulário.
-export function previewPontos(categoria, { minutos, quantidade_frutas, data = new Date() }) {
+export function previewPontos(categoria, { minutos, segundos, quantidade_frutas, data = new Date() }) {
   const semana = calculaSemanaAtual(data);
   if (semana < 1 || semana > 3) return 0;
   if (categoria === 'energia') return Number(quantidade_frutas) || 0;
+  const totalSeg = (Number(minutos) || 0) * 60 + (Number(segundos) || 0);
   if (categoria === 'movimento') {
-    return (minutos >= METAS.movimento[semana]) ? METAS.pontos.movimento : 0;
+    return (totalSeg >= METAS.movimento[semana] * 60) ? METAS.pontos.movimento : 0;
   }
   if (categoria === 'mental') {
-    return (minutos >= METAS.mental[semana]) ? METAS.pontos.mental : 0;
+    return (totalSeg >= METAS.mental[semana] * 60) ? METAS.pontos.mental : 0;
   }
   return 0;
 }

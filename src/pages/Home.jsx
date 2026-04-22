@@ -5,14 +5,14 @@ import { useAuth } from '../hooks/useAuth';
 import { calculaSemanaAtual, metasDaSemana, diasRestantes, diasDecorridos, MAX_PONTOS_DIA_PESSOA, MAX_PONTOS_DIA_GRUPO, maxAcumuladoGrupo, aplicarCapDiarioGrupo } from '../lib/weeks';
 import { hojeISO } from '../lib/dates';
 
-// Ordena ranking: pontos desc; empate → quem chegou aos pontos primeiro
-// (menor reviewed_at vence). Sem reviewed_at (= 0 pts) vai pro fim do empate.
+// Ordena ranking: pontos desc; empate → quem postou primeiro (menor created_at).
+// Baseado na hora do usuário POSTAR (não na hora do admin aprovar).
 function ordenarRanking(a, b) {
   if (b.pontos !== a.pontos) return b.pontos - a.pontos;
-  if (!a.ultimoReviewedAt && !b.ultimoReviewedAt) return 0;
-  if (!a.ultimoReviewedAt) return 1;
-  if (!b.ultimoReviewedAt) return -1;
-  return a.ultimoReviewedAt < b.ultimoReviewedAt ? -1 : 1;
+  if (!a.ultimoPostAt && !b.ultimoPostAt) return 0;
+  if (!a.ultimoPostAt) return 1;
+  if (!b.ultimoPostAt) return -1;
+  return a.ultimoPostAt < b.ultimoPostAt ? -1 : 1;
 }
 import { CATEGORIAS } from '../lib/scoring';
 import StatCard from '../components/StatCard';
@@ -30,7 +30,7 @@ export default function Home() {
     (async () => {
       const hoje = hojeISO();
       const [postsRes, profilesRes, groupsRes] = await Promise.all([
-        supabase.from('posts').select('pontos, user_id, categoria, data_registro, reviewed_at').eq('status', 'approved'),
+        supabase.from('posts').select('pontos, user_id, categoria, data_registro, created_at').eq('status', 'approved'),
         supabase.from('profiles').select('id, group_id'),
         supabase.from('groups').select('*').order('id'),
       ]);
@@ -49,31 +49,31 @@ export default function Home() {
 
       // Agrupa posts por grupo (pro cap diário)
       const postsPorGrupo = Object.fromEntries(groups.map(g => [g.id, []]));
-      const porUser = {}; // { user_id: { energia, movimento, mental, total, hoje, ultimoReviewedAt } }
+      const porUser = {}; // { user_id: { energia, movimento, mental, total, hoje, ultimoPostAt } }
 
       for (const p of posts) {
         const uid = p.user_id;
         const gid = userGroup[uid];
         const ehHoje = p.data_registro === hoje;
         if (gid) postsPorGrupo[gid].push(p);
-        if (!porUser[uid]) porUser[uid] = { energia: 0, movimento: 0, mental: 0, total: 0, hoje: 0, ultimoReviewedAt: null };
+        if (!porUser[uid]) porUser[uid] = { energia: 0, movimento: 0, mental: 0, total: 0, hoje: 0, ultimoPostAt: null };
         if ((p.pontos || 0) > 0) {
           porUser[uid][p.categoria] += p.pontos;
           porUser[uid].total += p.pontos;
           if (ehHoje) porUser[uid].hoje += p.pontos;
-          if (p.reviewed_at && (!porUser[uid].ultimoReviewedAt || p.reviewed_at > porUser[uid].ultimoReviewedAt)) {
-            porUser[uid].ultimoReviewedAt = p.reviewed_at;
+          if (p.created_at && (!porUser[uid].ultimoPostAt || p.created_at > porUser[uid].ultimoPostAt)) {
+            porUser[uid].ultimoPostAt = p.created_at;
           }
         }
       }
 
-      // Último reviewed_at com pontos > 0 por grupo (pro desempate)
+      // Último created_at (hora de postagem do usuário) com pontos > 0 por grupo
       const ultimoGrupo = Object.fromEntries(groups.map(g => [g.id, null]));
       for (const g of groups) {
         for (const p of postsPorGrupo[g.id] || []) {
-          if ((p.pontos || 0) > 0 && p.reviewed_at) {
-            if (!ultimoGrupo[g.id] || p.reviewed_at > ultimoGrupo[g.id]) {
-              ultimoGrupo[g.id] = p.reviewed_at;
+          if ((p.pontos || 0) > 0 && p.created_at) {
+            if (!ultimoGrupo[g.id] || p.created_at > ultimoGrupo[g.id]) {
+              ultimoGrupo[g.id] = p.created_at;
             }
           }
         }
@@ -91,7 +91,7 @@ export default function Home() {
               maxHoje: MAX_PONTOS_DIA_GRUPO,
               maxAcumulado: maxAcumuladoGrupo(null),
               tamanho: tamanhoGrupo[g.id],
-              ultimoReviewedAt: ultimoGrupo[g.id],
+              ultimoPostAt: ultimoGrupo[g.id],
             };
           })
           .sort(ordenarRanking)
@@ -119,18 +119,18 @@ export default function Home() {
           nome: p.nome_exibicao,
           ativo: true,
           id: p.id,
-          pontos: porUser[p.id] || { energia: 0, movimento: 0, mental: 0, total: 0, hoje: 0, ultimoReviewedAt: null },
+          pontos: porUser[p.id] || { energia: 0, movimento: 0, mental: 0, total: 0, hoje: 0, ultimoPostAt: null },
         }));
         const pendentes = (pend.data || []).map(p => ({
           nome: p.nome_exibicao,
           ativo: false,
           id: `pc-${p.id}`,
-          pontos: { energia: 0, movimento: 0, mental: 0, total: 0, hoje: 0, ultimoReviewedAt: null },
+          pontos: { energia: 0, movimento: 0, mental: 0, total: 0, hoje: 0, ultimoPostAt: null },
         }));
         // Desempate: pontos desc → quem chegou aos pontos primeiro (reviewed_at asc)
         ativos.sort((a, b) => ordenarRanking(
-          { pontos: a.pontos.total, ultimoReviewedAt: a.pontos.ultimoReviewedAt },
-          { pontos: b.pontos.total, ultimoReviewedAt: b.pontos.ultimoReviewedAt },
+          { pontos: a.pontos.total, ultimoPostAt: a.pontos.ultimoPostAt },
+          { pontos: b.pontos.total, ultimoPostAt: b.pontos.ultimoPostAt },
         ));
         setColegas([...ativos, ...pendentes]);
       }

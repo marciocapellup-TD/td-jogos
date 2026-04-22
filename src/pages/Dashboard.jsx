@@ -14,13 +14,14 @@ const CHART_TOOLTIP_STYLE = {
   fontSize: 12,
 };
 
-// Ordena ranking: pontos desc; empate -> quem chegou primeiro (reviewed_at asc)
+// Ordena ranking: pontos desc; empate -> quem postou primeiro (created_at asc).
+// Usa hora do usuário postar (nao da aprovacao do admin).
 function ordenarRanking(a, b) {
   if (b.pontos !== a.pontos) return b.pontos - a.pontos;
-  if (!a.ultimoReviewedAt && !b.ultimoReviewedAt) return 0;
-  if (!a.ultimoReviewedAt) return 1;
-  if (!b.ultimoReviewedAt) return -1;
-  return a.ultimoReviewedAt < b.ultimoReviewedAt ? -1 : 1;
+  if (!a.ultimoPostAt && !b.ultimoPostAt) return 0;
+  if (!a.ultimoPostAt) return 1;
+  if (!b.ultimoPostAt) return -1;
+  return a.ultimoPostAt < b.ultimoPostAt ? -1 : 1;
 }
 
 export default function Dashboard() {
@@ -63,9 +64,9 @@ export default function Dashboard() {
         catGrp[gid][p.categoria] = (catGrp[gid][p.categoria] || 0) + 1;
       }
       somaUser[uid] = (somaUser[uid] || 0) + pts;
-      if (pts > 0 && p.reviewed_at) {
-        if (!ultimoUser[uid] || p.reviewed_at > ultimoUser[uid]) ultimoUser[uid] = p.reviewed_at;
-        if (gid && (!ultimoGrupo[gid] || p.reviewed_at > ultimoGrupo[gid])) ultimoGrupo[gid] = p.reviewed_at;
+      if (pts > 0 && p.created_at) {
+        if (!ultimoUser[uid] || p.created_at > ultimoUser[uid]) ultimoUser[uid] = p.created_at;
+        if (gid && (!ultimoGrupo[gid] || p.created_at > ultimoGrupo[gid])) ultimoGrupo[gid] = p.created_at;
       }
       const dataStr = p.data_registro;
       dia[dataStr] = dia[dataStr] || Object.fromEntries(groups.map(g => [g.id, 0]));
@@ -84,7 +85,7 @@ export default function Dashboard() {
     const rankingGrupos = groups.map(g => ({
       ...g,
       pontos: somaGrp[g.id] || 0,
-      ultimoReviewedAt: ultimoGrupo[g.id],
+      ultimoPostAt: ultimoGrupo[g.id],
     })).sort(ordenarRanking);
 
     const rankingIndivFull = profiles.map(p => {
@@ -96,7 +97,7 @@ export default function Dashboard() {
         group_id: p.group_id,
         cor: g?.cor,
         pontos: somaUser[p.id] || 0,
-        ultimoReviewedAt: ultimoUser[p.id] || null,
+        ultimoPostAt: ultimoUser[p.id] || null,
       };
     }).sort(ordenarRanking);
 

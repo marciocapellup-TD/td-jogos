@@ -115,6 +115,32 @@ export default function Regras() {
         <Regra emoji="🏆" titulo="Placar do grupo">
           Pontuação é somada ao <strong>seu grupo</strong>. Quanto mais você participa, mais o seu time se destaca.
         </Regra>
+        <Regra emoji="⚖️" titulo="Critério de desempate">
+          Em caso de <strong>empate nos pontos</strong> (pessoas ou grupos), quem <strong>postou primeiro</strong> fica na frente. Considera a hora do <em>envio do post pelo usuário</em> — não a hora da aprovação do admin. Postou mais cedo no dia, leva vantagem.
+        </Regra>
+      </div>
+
+      {/* Ordenação do ranking */}
+      <h3 style={{ marginBottom: 12 }}>Como o ranking é calculado</h3>
+      <div className="card" style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: 13, lineHeight: 1.75, color: 'var(--branco-70)' }}>
+          <div style={{ marginBottom: 10 }}>
+            <strong style={{ color: 'var(--amarelo)' }}>1º critério:</strong> total de pontos acumulados (decrescente).
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <strong style={{ color: 'var(--amarelo)' }}>2º critério (desempate):</strong> quem chegou aos pontos primeiro. Comparamos a <strong>hora do post</strong> mais recente que contribuiu com pontos.
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <strong style={{ color: 'var(--amarelo)' }}>3º critério:</strong> quem ainda não pontuou fica por último no grupo.
+          </div>
+          <div style={{
+            marginTop: 14, paddingTop: 12,
+            borderTop: '1px solid rgba(255,255,255,0.05)',
+            fontSize: 11, color: 'var(--branco-45)', fontStyle: 'italic',
+          }}>
+            Importante: a hora considerada é quando <strong>você envia</strong> o post, não quando o admin aprova. Se o admin demora pra avaliar, isso não te prejudica no desempate.
+          </div>
+        </div>
       </div>
 
       {/* Pontuação máxima teórica */}

@@ -194,10 +194,11 @@ returns trigger
 language plpgsql
 as $$
 begin
-  if NEW.status = 'approved' and (OLD.status is distinct from 'approved') then
+  -- Recalcula SEMPRE que o status for approved (não só na primeira aprovação).
+  -- Previne admin de inflar pontos via UPDATE manual em post já aprovado.
+  if NEW.status = 'approved' then
     NEW.pontos := calcular_pontos(NEW.categoria, NEW.minutos, NEW.quantidade_frutas, NEW.data_registro);
-  end if;
-  if NEW.status <> 'approved' then
+  else
     NEW.pontos := 0;
   end if;
   return NEW;

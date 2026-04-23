@@ -76,7 +76,10 @@ create policy "groups_admin_update" on groups for update using (public.is_admin(
 alter table email_exceptions enable row level security;
 
 drop policy if exists "exc_read_all" on email_exceptions;
-create policy "exc_read_all" on email_exceptions for select using (true);
+drop policy if exists "exc_read_admin" on email_exceptions;
+-- Leitura restrita a admins. A função email_allowed() é SECURITY DEFINER
+-- e continua consultando essa tabela pelo login sem depender de RLS.
+create policy "exc_read_admin" on email_exceptions for select using (public.is_admin());
 
 drop policy if exists "exc_admin_all" on email_exceptions;
 create policy "exc_admin_all" on email_exceptions for all using (public.is_admin());

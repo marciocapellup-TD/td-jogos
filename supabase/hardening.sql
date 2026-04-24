@@ -98,9 +98,12 @@ drop policy if exists "audit_read_superadmin" on audit_log;
 create policy "audit_read_superadmin" on audit_log for select using (public.is_superadmin());
 
 -- Log de mudanças em posts (status ou pontos)
+-- SECURITY DEFINER: roda com privilégios do owner, bypassa RLS do audit_log
 create or replace function log_post_update()
 returns trigger
 language plpgsql
+security definer
+set search_path = public
 as $$
 begin
   if NEW.status is distinct from OLD.status
@@ -129,6 +132,8 @@ create trigger trg_audit_post_update
 create or replace function log_profile_update()
 returns trigger
 language plpgsql
+security definer
+set search_path = public
 as $$
 begin
   if NEW.role is distinct from OLD.role
@@ -158,6 +163,8 @@ create trigger trg_audit_profile_update
 create or replace function log_post_delete()
 returns trigger
 language plpgsql
+security definer
+set search_path = public
 as $$
 begin
   insert into audit_log (actor_id, tabela, operacao, registro_id, antes, depois)

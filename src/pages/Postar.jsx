@@ -16,7 +16,8 @@ export default function Postar() {
   const metas = metasDaSemana(semana);
 
   const [quantidadeFrutas, setQuantidadeFrutas] = useState(1);
-  const [duracao, setDuracao] = useState('');
+  const [minutosInput, setMinutosInput] = useState('');
+  const [segundosInput, setSegundosInput] = useState('');
   const [fotoUrl, setFotoUrl] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState(null);
@@ -87,7 +88,9 @@ export default function Postar() {
                  || jaPostouMovMental
                  || semana > 3;
 
-  const { minutos: minParsed, segundos: segParsed, valido: duracaoValida } = parseDuracao(duracao);
+  const minParsed = Math.max(0, Math.min(999, Number(minutosInput) || 0));
+  const segParsed = Math.max(0, Math.min(59, Number(segundosInput) || 0));
+  const duracaoValida = (minutosInput !== '' || segundosInput !== '') && (minParsed > 0 || segParsed > 0);
 
   const pontosPreview = previewPontos(categoria, {
     minutos: minParsed,
@@ -100,9 +103,7 @@ export default function Postar() {
     setErro(null);
     if (!fotoUrl) { setErro('Envie a foto antes de postar.'); return; }
     if (categoria !== 'energia') {
-      if (!duracao.trim()) { setErro('Informe a duração no formato MM:SS.'); return; }
-      if (!duracaoValida) { setErro('Formato inválido. Use MM:SS (ex: 8:37).'); return; }
-      if (minParsed === 0 && segParsed === 0) { setErro('A duração precisa ser maior que zero.'); return; }
+      if (!duracaoValida) { setErro('Informe a duração (minutos e/ou segundos).'); return; }
     }
 
     setEnviando(true);
@@ -197,23 +198,48 @@ export default function Postar() {
 
         {categoria !== 'energia' && (
           <div className="form-group">
-            <label>Duração registrada no app (MM:SS)</label>
-            <input
-              className="input"
-              type="text"
-              inputMode="numeric"
-              maxLength="6"
-              value={duracao}
-              onChange={e => setDuracao(formatarEntradaDuracao(e.target.value))}
-              placeholder={`Meta semana ${semana || '?'}: ${categoria === 'movimento' ? metas?.movimento.minutos : metas?.mental.minutos}:00 — ex: 8:37`}
-            />
-            {duracao && !duracaoValida && (
-              <div style={{ fontSize: 11, color: 'var(--vermelho)', marginTop: 6 }}>
-                Formato inválido. Use MM:SS (ex: 8:37).
+            <label>
+              Duração registrada no app
+              <span style={{ fontSize: 10, color: 'var(--branco-45)', marginLeft: 8, letterSpacing: 0 }}>
+                (meta semana {semana || '?'}: {categoria === 'movimento' ? metas?.movimento.minutos : metas?.mental.minutos} min)
+              </span>
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <input
+                  className="input"
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  max="999"
+                  value={minutosInput}
+                  onChange={e => setMinutosInput(e.target.value.replace(/[^\d]/g, ''))}
+                  placeholder="minutos"
+                  style={{ textAlign: 'center', fontSize: 18, fontFamily: 'Rajdhani', fontWeight: 700 }}
+                />
+                <div style={{ fontSize: 10, color: 'var(--branco-45)', marginTop: 4, textAlign: 'center', letterSpacing: 1 }}>
+                  MINUTOS
+                </div>
               </div>
-            )}
+              <div>
+                <input
+                  className="input"
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  max="59"
+                  value={segundosInput}
+                  onChange={e => setSegundosInput(e.target.value.replace(/[^\d]/g, ''))}
+                  placeholder="0"
+                  style={{ textAlign: 'center', fontSize: 18, fontFamily: 'Rajdhani', fontWeight: 700 }}
+                />
+                <div style={{ fontSize: 10, color: 'var(--branco-45)', marginTop: 4, textAlign: 'center', letterSpacing: 1 }}>
+                  SEGUNDOS (opcional)
+                </div>
+              </div>
+            </div>
             {jaPostouMovMental && (
-              <div style={{ fontSize: 11, color: 'var(--vermelho)', marginTop: 6 }}>
+              <div style={{ fontSize: 11, color: 'var(--vermelho)', marginTop: 8 }}>
                 Você já registrou {cat.label.toLowerCase()} hoje.
               </div>
             )}
@@ -263,32 +289,6 @@ export default function Postar() {
       </form>
     </div>
   );
-}
-
-// Parse "MM:SS" ou "MM" → { minutos, segundos, valido }
-function parseDuracao(str) {
-  const s = (str || '').trim();
-  if (!s) return { minutos: 0, segundos: 0, valido: false };
-  const partes = s.split(':');
-  if (partes.length > 2) return { minutos: 0, segundos: 0, valido: false };
-  const min = Number(partes[0]);
-  const seg = partes.length === 2 ? Number(partes[1]) : 0;
-  if (!Number.isFinite(min) || !Number.isFinite(seg)) return { minutos: 0, segundos: 0, valido: false };
-  if (min < 0 || min > 999) return { minutos: 0, segundos: 0, valido: false };
-  if (seg < 0 || seg > 59) return { minutos: 0, segundos: 0, valido: false };
-  return { minutos: Math.floor(min), segundos: Math.floor(seg), valido: true };
-}
-
-// Formata entrada do usuário: só aceita dígitos e ":", injeta ":" automático após 2 dígitos se ainda não tiver
-function formatarEntradaDuracao(valor) {
-  const limpo = (valor || '').replace(/[^\d:]/g, '');
-  if (!limpo.includes(':') && limpo.length > 2) {
-    return limpo.slice(0, -2) + ':' + limpo.slice(-2, limpo.length);
-  }
-  const partes = limpo.split(':');
-  if (partes.length > 2) return partes[0] + ':' + partes.slice(1).join('').slice(0, 2);
-  if (partes[1] && partes[1].length > 2) return partes[0] + ':' + partes[1].slice(0, 2);
-  return limpo;
 }
 
 function AlertaBox({ children }) {

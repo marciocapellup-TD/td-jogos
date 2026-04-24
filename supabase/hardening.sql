@@ -17,7 +17,9 @@ returns trigger
 language plpgsql
 as $$
 begin
-  NEW.data_registro := current_date;
+  -- Usa timezone de Brasília em vez de UTC (server roda em UTC).
+  -- Se não fizer isso, posts feitos à noite BR caem no dia seguinte.
+  NEW.data_registro := (current_timestamp at time zone 'America/Sao_Paulo')::date;
   return NEW;
 end;
 $$;

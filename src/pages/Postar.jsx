@@ -158,22 +158,29 @@ export default function Postar() {
         </div>
       )}
 
-      {/* Celebração: bateu meta pessoal do dia */}
-      {pontosHoje.pessoa >= MAX_PONTOS_DIA_PESSOA && (
-        <CelebracaoBox tipo="pessoa" pontos={pontosHoje.pessoa} max={MAX_PONTOS_DIA_PESSOA} />
-      )}
-      {/* Celebração: time bateu meta coletiva do dia (cap 35 igual pra todos) */}
-      {pontosHoje.pessoa < MAX_PONTOS_DIA_PESSOA
-        && pontosHoje.grupo >= MAX_PONTOS_DIA_GRUPO && (
-        <CelebracaoBox
-          tipo="grupo"
-          pontos={Math.min(pontosHoje.grupo, MAX_PONTOS_DIA_GRUPO)}
-          max={MAX_PONTOS_DIA_GRUPO}
-          grupoNome={profile?.groups?.nome}
-        />
-      )}
+      {/* Celebração: bateu meta pessoal do dia → esconde form, vale pra qualquer categoria */}
+      {pontosHoje.pessoa >= MAX_PONTOS_DIA_PESSOA ? (
+        <>
+          <CelebracaoBox tipo="pessoa" pontos={pontosHoje.pessoa} max={MAX_PONTOS_DIA_PESSOA} categoria={categoria} />
+          <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+            <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={() => navigate('/')}>
+              Voltar pra home
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Celebração: time bateu meta coletiva do dia (cap 35 igual pra todos) */}
+          {pontosHoje.grupo >= MAX_PONTOS_DIA_GRUPO && (
+            <CelebracaoBox
+              tipo="grupo"
+              pontos={Math.min(pontosHoje.grupo, MAX_PONTOS_DIA_GRUPO)}
+              max={MAX_PONTOS_DIA_GRUPO}
+              grupoNome={profile?.groups?.nome}
+            />
+          )}
 
-      <form onSubmit={enviar} className="card">
+          <form onSubmit={enviar} className="card">
         {categoria === 'energia' && (
           <div className="form-group">
             <label>Quantas frutas você comeu?</label>
@@ -287,6 +294,8 @@ export default function Postar() {
           </button>
         </div>
       </form>
+        </>
+      )}
     </div>
   );
 }
@@ -305,12 +314,13 @@ function AlertaBox({ children }) {
   );
 }
 
-function CelebracaoBox({ tipo, pontos, max, grupoNome }) {
+function CelebracaoBox({ tipo, pontos, max, grupoNome, categoria }) {
+  const emoji = categoria === 'energia' ? '🍎' : categoria === 'movimento' ? '🏃' : categoria === 'mental' ? '🧠' : '';
   const titulo = tipo === 'pessoa'
-    ? '🎉 Meta pessoal do dia batida!'
+    ? `🎉 Você já bateu sua meta do dia!`
     : `🎉 Seu time ${grupoNome || ''} bateu a meta do dia!`;
   const mensagem = tipo === 'pessoa'
-    ? `Você já somou ${pontos}/${max} pontos hoje — o máximo possível. Pode relaxar, descansar ou só incentivar a galera. Não precisa postar mais nada hoje.`
+    ? `Você já somou ${pontos}/${max} pontos hoje — o máximo possível${emoji ? ` (incluindo ${emoji})` : ''}. Pode relaxar, descansar ou só incentivar a galera. Não precisa postar mais nada hoje.`
     : `O time inteiro já somou ${pontos}/${max} pontos hoje — o máximo coletivo. Parabéns time! Pode descansar ou incentivar quem ainda tá postando.`;
   return (
     <div style={{

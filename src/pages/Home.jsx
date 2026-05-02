@@ -186,15 +186,17 @@ export default function Home() {
               onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
               onMouseLeave={e => e.currentTarget.style.transform = ''}
             >
-              <div style={{ fontSize: 36, marginBottom: 6 }}>{cat.emoji}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 6 }}>
+                <div style={{ fontSize: 36, lineHeight: 1 }}>{cat.emoji}</div>
+                <div className="cta-pulse" style={{ fontFamily: 'Rajdhani', fontSize: 22, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: '#fff' }}>
+                  Registre aqui
+                </div>
+              </div>
               <div style={{ fontFamily: 'Rajdhani', fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2, color: cat.cor }}>
                 {cat.label}
               </div>
               <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 4 }}>
                 {cat.dica}
-              </div>
-              <div style={{ fontFamily: 'Rajdhani', fontSize: 12, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: cat.cor, marginTop: 8 }}>
-                Registre aqui
               </div>
             </div>
           </Link>

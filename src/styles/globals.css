@@ -70,6 +70,16 @@ h3 { font-size: 13px; letter-spacing: 2px; color: var(--amarelo); }
 
 .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
 
+@keyframes pulseCta {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.04); }
+}
+
+.cta-pulse {
+  animation: pulseCta 1.6s ease-in-out infinite;
+  transform-origin: left center;
+}
+
 .label {
   font-family: 'Rajdhani', sans-serif;
   font-size: 9px;

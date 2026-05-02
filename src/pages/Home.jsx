@@ -193,6 +193,9 @@ export default function Home() {
               <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 4 }}>
                 {cat.dica}
               </div>
+              <div style={{ fontFamily: 'Rajdhani', fontSize: 12, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: cat.cor, marginTop: 8 }}>
+                Registre aqui
+              </div>
             </div>
           </Link>
         ))}

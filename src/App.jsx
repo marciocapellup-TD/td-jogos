@@ -9,6 +9,7 @@ import MeusPosts from './pages/MeusPosts';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import Regras from './pages/Regras';
+import EditarPost from './pages/EditarPost';
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Home />} />
           <Route path="postar/:categoria" element={<Postar />} />
+          <Route path="editar/:postId" element={<EditarPost />} />
           <Route path="meus-posts" element={<MeusPosts />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="regras" element={<Regras />} />

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import PostCard from '../components/PostCard';
@@ -119,6 +120,7 @@ function Excecoes() {
 
 function Fila() {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [rejModal, setRejModal] = useState(null);
@@ -164,9 +166,10 @@ function Fila() {
       <div className="grid-cards">
         {posts.map(p => (
           <PostCard key={p.id} post={p}>
-            <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-              <button className="btn btn-success" style={{ flex: 1 }} onClick={() => aprovar(p)}>✓ Aprovar</button>
-              <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => { setRejModal(p); setMotivo(''); }}>✗ Reprovar</button>
+            <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+              <button className="btn btn-success" style={{ flex: 1, minWidth: 100 }} onClick={() => aprovar(p)}>✓ Aprovar</button>
+              <button className="btn btn-danger" style={{ flex: 1, minWidth: 100 }} onClick={() => { setRejModal(p); setMotivo(''); }}>✗ Reprovar</button>
+              <button className="btn btn-ghost" style={{ fontSize: 11, padding: '6px 12px' }} onClick={() => navigate(`/editar/${p.id}`)}>✏️ Editar</button>
             </div>
           </PostCard>
         ))}
@@ -489,6 +492,7 @@ function Grupos() {
 }
 
 function Aprovados() {
+  const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [busca, setBusca] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('');
@@ -624,6 +628,14 @@ function Aprovados() {
           {filtrados.map(p => (
             <PostCard key={p.id} post={p}>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: 10, padding: '6px 10px' }}
+                  onClick={() => navigate(`/editar/${p.id}`)}
+                  title="Editar minutos, frutas ou foto (recalcula pontos)"
+                >
+                  ✏️ Editar
+                </button>
                 <button
                   className="btn btn-ghost"
                   style={{ fontSize: 10, padding: '6px 10px' }}

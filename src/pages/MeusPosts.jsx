@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import PostCard from '../components/PostCard';
 
 export default function MeusPosts() {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,7 +38,19 @@ export default function MeusPosts() {
       )}
 
       <div className="grid-cards">
-        {posts.map(p => <PostCard key={p.id} post={p} />)}
+        {posts.map(p => (
+          <PostCard key={p.id} post={p}>
+            {p.status !== 'rejected' && (
+              <button
+                className="btn btn-ghost"
+                style={{ fontSize: 11, padding: '6px 12px', marginTop: 4 }}
+                onClick={() => navigate(`/editar/${p.id}`)}
+              >
+                ✏️ Editar
+              </button>
+            )}
+          </PostCard>
+        ))}
       </div>
     </div>
   );

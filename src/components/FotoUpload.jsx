@@ -1,11 +1,13 @@
 import { useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-export default function FotoUpload({ userId, onUploaded }) {
-  const [preview, setPreview] = useState(null);
+export default function FotoUpload({ userId, onUploaded, urlAtual = null }) {
+  // Se urlAtual vier (modo edição), usa como preview inicial até o user trocar.
+  const [preview, setPreview] = useState(urlAtual || null);
   const [uploading, setUploading] = useState(false);
   const [erro, setErro] = useState(null);
   const [sucesso, setSucesso] = useState(false);
+  const [trocouFoto, setTrocouFoto] = useState(false);
 
   const inputCamera = useRef(null);
   const inputGaleria = useRef(null);
@@ -46,6 +48,7 @@ export default function FotoUpload({ userId, onUploaded }) {
     const { data } = supabase.storage.from('postagens').getPublicUrl(path);
     setUploading(false);
     setSucesso(true);
+    setTrocouFoto(true);
     onUploaded(data.publicUrl);
   };
 
@@ -89,6 +92,18 @@ export default function FotoUpload({ userId, onUploaded }) {
               letterSpacing: 1.5, textTransform: 'uppercase',
             }}>
               ✓ Enviada
+            </div>
+          )}
+          {urlAtual && !trocouFoto && (
+            <div style={{
+              position: 'absolute',
+              top: 8, left: 8,
+              background: 'rgba(0,0,0,0.6)', color: '#fff',
+              padding: '3px 10px', borderRadius: 3,
+              fontSize: 10, fontFamily: 'Rajdhani', fontWeight: 700,
+              letterSpacing: 1.5, textTransform: 'uppercase',
+            }}>
+              foto atual
             </div>
           )}
         </div>

@@ -29,19 +29,41 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
+    let mounted = true;
+
+    const fetchAll = async () => {
       const [postsRes, profRes, groupRes] = await Promise.all([
         supabase.from('posts').select('*').eq('status', 'approved'),
         supabase.from('profiles').select('id, nome_exibicao, group_id').order('nome_exibicao'),
         supabase.from('groups').select('*').order('id'),
       ]);
+      if (!mounted) return;
       setData({
         posts: postsRes.data || [],
         profiles: profRes.data || [],
         groups: groupRes.data || [],
       });
       setLoading(false);
-    })();
+    };
+
+    fetchAll();
+
+    const onFocus = () => fetchAll();
+    const onVisibility = () => { if (document.visibilityState === 'visible') fetchAll(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    const channel = supabase
+      .channel('posts-dashboard')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, fetchAll)
+      .subscribe();
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const { rankingGrupos, rankingIndiv, rankingIndivFull, porCategoria, serieTemporal, maisAtivos } = useMemo(() => {

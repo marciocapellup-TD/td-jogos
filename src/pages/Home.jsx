@@ -27,13 +27,16 @@ export default function Home() {
   const [colegas, setColegas] = useState([]);
 
   useEffect(() => {
-    (async () => {
+    let mounted = true;
+
+    const fetchAll = async () => {
       const hoje = hojeISO();
       const [postsRes, profilesRes, groupsRes] = await Promise.all([
         supabase.from('posts').select('pontos, user_id, categoria, data_registro, created_at').eq('status', 'approved'),
         supabase.from('profiles').select('id, group_id'),
         supabase.from('groups').select('*').order('id'),
       ]);
+      if (!mounted) return;
 
       const posts = postsRes.data || [];
       const profiles = profilesRes.data || [];
@@ -134,7 +137,26 @@ export default function Home() {
         ));
         setColegas([...ativos, ...pendentes]);
       }
-    })();
+    };
+
+    fetchAll();
+
+    const onFocus = () => fetchAll();
+    const onVisibility = () => { if (document.visibilityState === 'visible') fetchAll(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    const channel = supabase
+      .channel('posts-home')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, fetchAll)
+      .subscribe();
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+      supabase.removeChannel(channel);
+    };
   }, [profile?.id, profile?.group_id]);
 
   const maxPontos = Math.max(1, ...rankingGrupos.map(g => g.pontos));

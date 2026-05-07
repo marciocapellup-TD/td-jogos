@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase, fetchAllApprovedPosts } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { calculaSemanaAtual, metasDaSemana, diasRestantes, diasDecorridos, MAX_PONTOS_DIA_PESSOA, MAX_PONTOS_DIA_GRUPO, maxAcumuladoGrupo, aplicarCapDiarioGrupo } from '../lib/weeks';
 import { hojeISO } from '../lib/dates';
@@ -31,16 +31,15 @@ export default function Home() {
 
     const fetchAll = async () => {
       const hoje = hojeISO();
-      // .range(0, 9999) força retorno completo (default postgrest=1000 cortava
-      // posts mais novos quando total approved > 1000, sumindo pontos de hoje).
-      const [postsRes, profilesRes, groupsRes] = await Promise.all([
-        supabase.from('posts').select('pontos, user_id, categoria, data_registro, created_at').eq('status', 'approved').order('created_at', { ascending: true }).range(0, 9999),
+      // fetchAllApprovedPosts pagina em chunks de 1000 (Supabase tem
+      // db-max-rows=1000 server-side, .range numa query só não funciona).
+      const [posts, profilesRes, groupsRes] = await Promise.all([
+        fetchAllApprovedPosts('pontos, user_id, categoria, data_registro, created_at'),
         supabase.from('profiles').select('id, group_id'),
         supabase.from('groups').select('*').order('id'),
       ]);
       if (!mounted) return;
 
-      const posts = postsRes.data || [];
       const profiles = profilesRes.data || [];
       const groups = groupsRes.data || [];
 

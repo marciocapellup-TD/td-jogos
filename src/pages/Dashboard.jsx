@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, fetchAllApprovedPosts } from '../lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend, CartesianGrid } from 'recharts';
 import { DATA_INICIO, diasDecorridos, MAX_PONTOS_DIA_GRUPO } from '../lib/weeks';
 import { CATEGORIAS } from '../lib/scoring';
@@ -32,16 +32,16 @@ export default function Dashboard() {
     let mounted = true;
 
     const fetchAll = async () => {
-      // .range(0, 9999) força retorno completo (default postgrest=1000 cortava
-      // posts mais novos quando total approved > 1000, sumindo pontos de hoje).
-      const [postsRes, profRes, groupRes] = await Promise.all([
-        supabase.from('posts').select('*').eq('status', 'approved').order('created_at', { ascending: true }).range(0, 9999),
+      // fetchAllApprovedPosts pagina em chunks de 1000 (Supabase tem
+      // db-max-rows=1000 server-side, .range numa query só não funciona).
+      const [posts, profRes, groupRes] = await Promise.all([
+        fetchAllApprovedPosts('*'),
         supabase.from('profiles').select('id, nome_exibicao, group_id').order('nome_exibicao'),
         supabase.from('groups').select('*').order('id'),
       ]);
       if (!mounted) return;
       setData({
-        posts: postsRes.data || [],
+        posts,
         profiles: profRes.data || [],
         groups: groupRes.data || [],
       });

@@ -501,12 +501,24 @@ function Aprovados() {
   const [groups, setGroups] = useState([]);
 
   const carregar = () => {
-    supabase.from('posts')
-      .select('*, profiles!posts_user_id_fkey(id, nome_exibicao, group_id, groups(nome, cor))')
-      .eq('status', 'approved')
-      .order('created_at', { ascending: false })
-      .range(0, 9999)
-      .then(({ data }) => setPosts(data || []));
+    // Paginação manual (Supabase tem db-max-rows=1000 server-side).
+    (async () => {
+      const PAGE = 1000;
+      let all = [];
+      let from = 0;
+      for (let i = 0; i < 50; i++) {
+        const { data, error } = await supabase.from('posts')
+          .select('*, profiles!posts_user_id_fkey(id, nome_exibicao, group_id, groups(nome, cor))')
+          .eq('status', 'approved')
+          .order('created_at', { ascending: false })
+          .range(from, from + PAGE - 1);
+        if (error || !data || data.length === 0) break;
+        all = all.concat(data);
+        if (data.length < PAGE) break;
+        from += PAGE;
+      }
+      setPosts(all);
+    })();
     supabase.from('groups').select('*').order('id').then(({ data }) => setGroups(data || []));
   };
   useEffect(carregar, []);

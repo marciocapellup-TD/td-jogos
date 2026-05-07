@@ -32,8 +32,10 @@ export default function Dashboard() {
     let mounted = true;
 
     const fetchAll = async () => {
+      // .range(0, 9999) força retorno completo (default postgrest=1000 cortava
+      // posts mais novos quando total approved > 1000, sumindo pontos de hoje).
       const [postsRes, profRes, groupRes] = await Promise.all([
-        supabase.from('posts').select('*').eq('status', 'approved'),
+        supabase.from('posts').select('*').eq('status', 'approved').order('created_at', { ascending: true }).range(0, 9999),
         supabase.from('profiles').select('id, nome_exibicao, group_id').order('nome_exibicao'),
         supabase.from('groups').select('*').order('id'),
       ]);

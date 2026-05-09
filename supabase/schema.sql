@@ -49,6 +49,7 @@ create table if not exists posts (
   reviewed_at timestamptz,
   motivo_reprovacao text,
   foto_liberada boolean not null default false,
+  comentario text check (comentario is null or char_length(comentario) <= 500),
   created_at timestamptz default now(),
   constraint chk_energia check (
     categoria != 'energia' or (quantidade_frutas is not null and minutos is null)

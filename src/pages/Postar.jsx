@@ -19,6 +19,7 @@ export default function Postar() {
   const [minutosInput, setMinutosInput] = useState('');
   const [segundosInput, setSegundosInput] = useState('');
   const [fotoUrl, setFotoUrl] = useState(null);
+  const [comentario, setComentario] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState(null);
   const [postsHoje, setPostsHoje] = useState([]);
@@ -107,12 +108,14 @@ export default function Postar() {
     }
 
     setEnviando(true);
+    const comentarioLimpo = comentario.trim().slice(0, 500);
     const payload = {
       user_id: profile.id,
       categoria,
       foto_url: fotoUrl,
       status: 'pending',
       data_registro: hojeISO(), // força data local BR em vez de current_date UTC
+      comentario: comentarioLimpo || null,
       ...(categoria === 'energia'
         ? { quantidade_frutas: Number(quantidadeFrutas) }
         : { minutos: minParsed, segundos: segParsed }),
@@ -257,6 +260,26 @@ export default function Postar() {
           <label>Foto comprovando</label>
           <FotoUpload userId={profile.id} onUploaded={setFotoUrl} />
           <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 6 }}>{cat.dica}</div>
+        </div>
+
+        <div className="form-group">
+          <label>
+            Comentário
+            <span style={{ fontSize: 10, color: 'var(--branco-45)', marginLeft: 8, letterSpacing: 0 }}>
+              (opcional · até 500 caracteres)
+            </span>
+          </label>
+          <textarea
+            className="input"
+            rows={3}
+            maxLength={500}
+            value={comentario}
+            onChange={e => setComentario(e.target.value)}
+            placeholder="Conta um pouco como foi (qual fruta, que treino, onde meditou...)"
+          />
+          <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 4, textAlign: 'right' }}>
+            {comentario.length}/500
+          </div>
         </div>
 
         <div style={{

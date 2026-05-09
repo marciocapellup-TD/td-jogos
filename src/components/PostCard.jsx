@@ -79,6 +79,20 @@ export default function PostCard({ post, children }) {
         {post.categoria !== 'energia' && post.minutos != null && <>⏱️ {formatarDuracao(post.minutos, post.segundos)}</>}
       </div>
 
+      {post.comentario && (
+        <div style={{
+          background: 'rgba(255,255,255,0.04)',
+          borderLeft: '3px solid var(--amarelo)',
+          padding: '8px 12px',
+          fontSize: 13,
+          color: 'var(--branco-70)',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+        }}>
+          {post.comentario}
+        </div>
+      )}
+
       {post.status === 'rejected' && post.motivo_reprovacao && (
         <div style={{
           background: 'rgba(192,57,43,0.12)',

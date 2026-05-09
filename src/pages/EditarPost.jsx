@@ -23,6 +23,7 @@ export default function EditarPost() {
   const [segundosInput, setSegundosInput] = useState('');
   const [novaFotoUrl, setNovaFotoUrl] = useState(null); // se trocou, vem URL da nova
   const [pathFotoAntiga, setPathFotoAntiga] = useState(null);
+  const [comentario, setComentario] = useState('');
 
   // Carrega o post
   useEffect(() => {
@@ -59,6 +60,7 @@ export default function EditarPost() {
       setQuantidadeFrutas(data.quantidade_frutas || 1);
       setMinutosInput(String(data.minutos ?? ''));
       setSegundosInput(String(data.segundos ?? ''));
+      setComentario(data.comentario || '');
       setPathFotoAntiga(extractStoragePath(data.foto_url));
       setLoading(false);
     })();
@@ -88,9 +90,13 @@ export default function EditarPost() {
   const segParsed = Math.max(0, Math.min(59, Number(segundosInput) || 0));
   const duracaoValida = (minParsed > 0 || segParsed > 0);
 
+  const comentarioLimpo = comentario.trim().slice(0, 500);
+  const comentarioMudou = comentarioLimpo !== (post.comentario || '');
+
   // Detecta se algo mudou
   const houveTroca =
     novaFotoUrl !== null
+    || comentarioMudou
     || (post.categoria === 'energia' && Number(quantidadeFrutas) !== post.quantidade_frutas)
     || (post.categoria !== 'energia' && (minParsed !== (post.minutos || 0) || segParsed !== (post.segundos || 0)));
 
@@ -123,6 +129,9 @@ export default function EditarPost() {
       updates.foto_url = novaFotoUrl;
       // Pra evitar bloqueio se tinha sido "liberada"
       updates.foto_liberada = false;
+    }
+    if (comentarioMudou) {
+      updates.comentario = comentarioLimpo || null;
     }
 
     const { error } = await supabase.from('posts').update(updates).eq('id', post.id);
@@ -258,6 +267,26 @@ export default function EditarPost() {
           />
           <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 6 }}>
             {cat.dica} · Trocar a foto apaga a antiga.
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>
+            Comentário
+            <span style={{ fontSize: 10, color: 'var(--branco-45)', marginLeft: 8, letterSpacing: 0 }}>
+              (opcional · até 500 caracteres)
+            </span>
+          </label>
+          <textarea
+            className="input"
+            rows={3}
+            maxLength={500}
+            value={comentario}
+            onChange={e => setComentario(e.target.value)}
+            placeholder="Conta um pouco como foi (qual fruta, que treino, onde meditou...)"
+          />
+          <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 4, textAlign: 'right' }}>
+            {comentario.length}/500
           </div>
         </div>
 

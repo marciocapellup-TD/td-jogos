@@ -46,13 +46,16 @@ export default function Dashboard() {
       if (mounted) setLoading(true);
       const [posts, profRes, groupRes] = await Promise.all([
         fetchAllApprovedPosts('*', janela),
-        supabase.from('profiles').select('id, nome_exibicao, group_id, ativo').order('nome_exibicao'),
+        supabase.from('profiles')
+          .select('id, nome_exibicao, group_id, ativo')
+          .eq('ativo', true)
+          .order('nome_exibicao'),
         supabase.from('groups').select('*').order('id'),
       ]);
       if (!mounted) return;
       setData({
         posts,
-        profiles: (profRes.data || []).filter(p => p.ativo !== false),
+        profiles: profRes.data || [],
         groups: groupRes.data || [],
       });
       setLoading(false);
@@ -138,7 +141,7 @@ export default function Dashboard() {
       };
     }).sort(ordenarRanking);
 
-    const rankingIndiv = rankingIndivFull.slice(0, 10);
+    const rankingIndiv = rankingIndivFull.slice(0, 15);
 
     const porCategoriaPorGrupo = groups.map(g => ({
       grupo: g.nome,
@@ -260,7 +263,7 @@ function Etapa2View({ totalPosts, participantes, agregados }) {
         />
       </div>
 
-      <h3 style={{ marginBottom: 12 }}>Ranking individual · Top 10</h3>
+      <h3 style={{ marginBottom: 12 }}>Ranking individual · Top 15</h3>
       <div className="card" style={{ marginBottom: 26 }}>
         {rankingIndiv.length === 0 && <div style={{ color: 'var(--branco-45)' }}>Sem dados ainda.</div>}
         {rankingIndiv.map((r, i) => (

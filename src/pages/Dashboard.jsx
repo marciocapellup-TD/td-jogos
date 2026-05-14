@@ -44,12 +44,16 @@ export default function Dashboard() {
 
     const fetchAll = async () => {
       if (mounted) setLoading(true);
+      // Etapa 2: só profiles ativos (quem saiu da TD não aparece no ranking).
+      // Etapa 1: todos os profiles (preserva histórico de quem participou e depois saiu).
+      let profQuery = supabase.from('profiles')
+        .select('id, nome_exibicao, group_id, ativo')
+        .order('nome_exibicao');
+      if (etapaView === 'etapa2') profQuery = profQuery.eq('ativo', true);
+
       const [posts, profRes, groupRes] = await Promise.all([
         fetchAllApprovedPosts('*', janela),
-        supabase.from('profiles')
-          .select('id, nome_exibicao, group_id, ativo')
-          .eq('ativo', true)
-          .order('nome_exibicao'),
+        profQuery,
         supabase.from('groups').select('*').order('id'),
       ]);
       if (!mounted) return;

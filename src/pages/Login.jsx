@@ -73,7 +73,8 @@ export default function Login() {
           fontSize: 11, fontWeight: 600, letterSpacing: 2,
           color: '#fff', textTransform: 'uppercase',
         }}>
-          <span>🍎 Energia</span>
+          <span>🍎🥗 Energia</span>
+          <span>💧 Hidratação</span>
           <span>🏃 Movimento</span>
           <span>🧠 Controle Mental</span>
         </div>
@@ -108,7 +109,7 @@ export default function Login() {
           fontSize: 10, color: 'var(--branco-45)', letterSpacing: 1.5,
           fontFamily: 'Rajdhani, sans-serif', fontWeight: 600, textTransform: 'uppercase',
         }}>
-          21 dias · 20/04 a 10/05 · 5 grupos · 26 participantes
+          Etapa 2 · 21 dias · 18/05 a 07/06 · 26 participantes (individual)
         </div>
       </div>
     </div>

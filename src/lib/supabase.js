@@ -29,18 +29,20 @@ if (typeof window !== 'undefined' && import.meta.env.DEV) {
 // Necessário porque o Supabase tem db-max-rows=1000 server-side, então
 // .range(0, 9999) numa query só é ignorado e retorna no máx 1000 linhas.
 // Solução: várias requests paginadas até receber página incompleta.
-export async function fetchAllApprovedPosts(select = '*') {
+// `opts` aceita { dataDe, dataAte } como string YYYY-MM-DD para filtrar por etapa.
+export async function fetchAllApprovedPosts(select = '*', opts = {}) {
   const PAGE = 1000;
   let all = [];
   let from = 0;
-  // Limite de segurança: 50 páginas = 50k posts (impossível ser atingido)
   for (let i = 0; i < 50; i++) {
-    const { data, error } = await supabase
+    let q = supabase
       .from('posts')
       .select(select)
       .eq('status', 'approved')
-      .order('created_at', { ascending: true })
-      .range(from, from + PAGE - 1);
+      .order('created_at', { ascending: true });
+    if (opts.dataDe)  q = q.gte('data_registro', opts.dataDe);
+    if (opts.dataAte) q = q.lte('data_registro', opts.dataAte);
+    const { data, error } = await q.range(from, from + PAGE - 1);
     if (error) {
       console.error('[fetchAllApprovedPosts] erro pagina', i, error);
       break;

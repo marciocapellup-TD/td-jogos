@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { CATEGORIAS, previewPontos } from '../lib/scoring';
+import { CATEGORIAS, HORARIO_LABEL, TIPO_ALIMENTO_LABEL, previewPontos } from '../lib/scoring';
 import { calculaSemanaAtual, metasDaSemana } from '../lib/weeks';
 import { formatarDataBR } from '../lib/dates';
 import FotoUpload from '../components/FotoUpload';
@@ -93,17 +93,22 @@ export default function EditarPost() {
   const comentarioLimpo = comentario.trim().slice(0, 500);
   const comentarioMudou = comentarioLimpo !== (post.comentario || '');
 
+  const ehEnergiaFruta = post.categoria === 'energia' && post.tipo_alimento === 'fruta';
+  const ehEnergiaVegetal = post.categoria === 'energia' && post.tipo_alimento === 'vegetal';
+  const temDuracao = post.categoria === 'movimento' || post.categoria === 'mental';
+
   // Detecta se algo mudou
   const houveTroca =
     novaFotoUrl !== null
     || comentarioMudou
-    || (post.categoria === 'energia' && Number(quantidadeFrutas) !== post.quantidade_frutas)
-    || (post.categoria !== 'energia' && (minParsed !== (post.minutos || 0) || segParsed !== (post.segundos || 0)));
+    || (ehEnergiaFruta && Number(quantidadeFrutas) !== post.quantidade_frutas)
+    || (temDuracao && (minParsed !== (post.minutos || 0) || segParsed !== (post.segundos || 0)));
 
   const pontosPreview = previewPontos(post.categoria, {
     minutos: minParsed,
     segundos: segParsed,
     quantidade_frutas: Number(quantidadeFrutas) || 0,
+    tipo_alimento: post.tipo_alimento,
     data: new Date(post.data_registro + 'T12:00:00'),
   });
 
@@ -111,7 +116,7 @@ export default function EditarPost() {
     e.preventDefault();
     setErro(null);
     if (!houveTroca) { setErro('Nenhuma alteração detectada.'); return; }
-    if (post.categoria !== 'energia' && !duracaoValida) {
+    if (temDuracao && !duracaoValida) {
       setErro('Informe a duração (minutos e/ou segundos).');
       return;
     }
@@ -119,9 +124,9 @@ export default function EditarPost() {
     setSalvando(true);
 
     const updates = {};
-    if (post.categoria === 'energia') {
+    if (ehEnergiaFruta) {
       updates.quantidade_frutas = Number(quantidadeFrutas);
-    } else {
+    } else if (temDuracao) {
       updates.minutos = minParsed;
       updates.segundos = segParsed;
     }
@@ -194,7 +199,7 @@ export default function EditarPost() {
       )}
 
       <form onSubmit={salvar} className="card">
-        {post.categoria === 'energia' && (
+        {ehEnergiaFruta && (
           <div className="form-group">
             <label>Quantas frutas você comeu?</label>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -213,7 +218,19 @@ export default function EditarPost() {
           </div>
         )}
 
-        {post.categoria !== 'energia' && (
+        {ehEnergiaVegetal && (
+          <div className="form-group" style={{ fontSize: 13, color: 'var(--branco-70)' }}>
+            {TIPO_ALIMENTO_LABEL.vegetal.emoji} <strong>{TIPO_ALIMENTO_LABEL.vegetal.label}</strong> — só dá pra trocar a foto ou o comentário (vale +1 pt fixo).
+          </div>
+        )}
+
+        {post.categoria === 'hidratacao' && (
+          <div className="form-group" style={{ fontSize: 13, color: 'var(--branco-70)' }}>
+            {HORARIO_LABEL[post.horario]?.emoji} <strong>Hidratação · {HORARIO_LABEL[post.horario]?.label}</strong> — horário não pode mudar (cria outro post se precisar trocar).
+          </div>
+        )}
+
+        {temDuracao && (
           <div className="form-group">
             <label>
               Duração registrada no app
@@ -298,7 +315,7 @@ export default function EditarPost() {
           fontFamily: 'Rajdhani', fontSize: 13, letterSpacing: 1,
         }}>
           {post.status === 'approved' ? 'Após salvar' : 'Se aprovado'}, vale <strong style={{ color: 'var(--amarelo)', fontSize: 18 }}>+{pontosPreview} pt</strong>
-          {pontosPreview === 0 && post.categoria !== 'energia' && (minParsed > 0 || segParsed > 0) && (
+          {pontosPreview === 0 && temDuracao && (minParsed > 0 || segParsed > 0) && (
             <div style={{ fontSize: 11, color: 'var(--vermelho)', letterSpacing: 0, marginTop: 4 }}>
               (abaixo da meta da semana — sem pontos)
             </div>

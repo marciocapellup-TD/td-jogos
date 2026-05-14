@@ -1,10 +1,12 @@
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
+import BannerCompeticao from './BannerCompeticao';
 
 export default function Layout() {
   return (
     <>
       <Header />
+      <BannerCompeticao />
       <main className="container">
         <Outlet />
       </main>

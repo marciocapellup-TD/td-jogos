@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase, fetchAllApprovedPosts } from '../lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend, CartesianGrid } from 'recharts';
-import { DATA_INICIO, diasDecorridos, MAX_PONTOS_DIA_GRUPO } from '../lib/weeks';
+import { diasDecorridos, MAX_PONTOS_DIA_GRUPO, MAX_PONTOS_CICLO } from '../lib/weeks';
 import { CATEGORIAS } from '../lib/scoring';
+import {
+  DATA_INICIO_ETAPA1, DATA_FIM_ETAPA1,
+  DATA_INICIO_ETAPA2, DATA_FIM_ETAPA2,
+} from '../lib/competicao';
 import RankingBar from '../components/RankingBar';
 import StatCard from '../components/StatCard';
 
@@ -14,8 +18,10 @@ const CHART_TOOLTIP_STYLE = {
   fontSize: 12,
 };
 
-// Ordena ranking: pontos desc; empate -> quem postou primeiro (created_at asc).
-// Usa hora do usuário postar (nao da aprovacao do admin).
+// Paleta cíclica usada nas barras individuais da Etapa 2.
+const PALETA = ['#F4CC04', '#3B82F6', '#10B981', '#8B5CF6', '#F97316', '#EC4899', '#06B6D4', '#84CC16'];
+
+// Ordena ranking: pontos desc; empate -> created_at do último post asc.
 function ordenarRanking(a, b) {
   if (b.pontos !== a.pontos) return b.pontos - a.pontos;
   if (!a.ultimoPostAt && !b.ultimoPostAt) return 0;
@@ -25,24 +31,28 @@ function ordenarRanking(a, b) {
 }
 
 export default function Dashboard() {
+  const [etapaView, setEtapaView] = useState('etapa2'); // 'etapa1' | 'etapa2'
   const [data, setData] = useState({ posts: [], profiles: [], groups: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
 
+    const janela = etapaView === 'etapa1'
+      ? { dataDe: DATA_INICIO_ETAPA1, dataAte: DATA_FIM_ETAPA1 }
+      : { dataDe: DATA_INICIO_ETAPA2, dataAte: DATA_FIM_ETAPA2 };
+
     const fetchAll = async () => {
-      // fetchAllApprovedPosts pagina em chunks de 1000 (Supabase tem
-      // db-max-rows=1000 server-side, .range numa query só não funciona).
+      if (mounted) setLoading(true);
       const [posts, profRes, groupRes] = await Promise.all([
-        fetchAllApprovedPosts('*'),
-        supabase.from('profiles').select('id, nome_exibicao, group_id').order('nome_exibicao'),
+        fetchAllApprovedPosts('*', janela),
+        supabase.from('profiles').select('id, nome_exibicao, group_id, ativo').order('nome_exibicao'),
         supabase.from('groups').select('*').order('id'),
       ]);
       if (!mounted) return;
       setData({
         posts,
-        profiles: profRes.data || [],
+        profiles: (profRes.data || []).filter(p => p.ativo !== false),
         groups: groupRes.data || [],
       });
       setLoading(false);
@@ -66,41 +76,44 @@ export default function Dashboard() {
       document.removeEventListener('visibilitychange', onVisibility);
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [etapaView]);
 
-  const { rankingGrupos, rankingIndiv, rankingIndivFull, porCategoria, serieTemporal, maisAtivos } = useMemo(() => {
+  const agregados = useMemo(() => {
     const { posts, profiles, groups } = data;
     const prefById = Object.fromEntries(profiles.map(p => [p.id, p]));
 
     const somaUser = {};
-    const ultimoUser = {}; // desempate: maior reviewed_at (com pontos > 0)
+    const ultimoUser = {};
     const ultimoGrupo = Object.fromEntries(groups.map(g => [g.id, null]));
-    const catGrp = Object.fromEntries(groups.map(g => [g.id, { energia: 0, movimento: 0, mental: 0 }]));
-    const dia = {};
-    const atividadeCat = { energia: {}, movimento: {}, mental: {} };
+    const catGrp = Object.fromEntries(groups.map(g => [g.id, { energia: 0, movimento: 0, mental: 0, hidratacao: 0 }]));
+    const catTotal = { energia: 0, movimento: 0, mental: 0, hidratacao: 0 };
+    const dia = {};                  // {dataIso: {gid: pts}} (etapa1)
+    const diaUser = {};              // {dataIso: {uid: pts}} (etapa2)
+    const atividadeCat = { energia: {}, movimento: {}, mental: {}, hidratacao: {} };
 
     for (const p of posts) {
       const uid = p.user_id;
       const prof = prefById[uid];
       const gid = prof?.group_id;
       const pts = p.pontos || 0;
-      if (gid) {
-        catGrp[gid][p.categoria] = (catGrp[gid][p.categoria] || 0) + 1;
-      }
+      if (gid) catGrp[gid][p.categoria] = (catGrp[gid][p.categoria] || 0) + 1;
+      catTotal[p.categoria] = (catTotal[p.categoria] || 0) + 1;
       somaUser[uid] = (somaUser[uid] || 0) + pts;
       if (pts > 0 && p.created_at) {
         if (!ultimoUser[uid] || p.created_at > ultimoUser[uid]) ultimoUser[uid] = p.created_at;
         if (gid && (!ultimoGrupo[gid] || p.created_at > ultimoGrupo[gid])) ultimoGrupo[gid] = p.created_at;
       }
       const dataStr = p.data_registro;
-      dia[dataStr] = dia[dataStr] || Object.fromEntries(groups.map(g => [g.id, 0]));
+      if (!dia[dataStr]) dia[dataStr] = Object.fromEntries(groups.map(g => [g.id, 0]));
       if (gid) dia[dataStr][gid] += pts;
+      if (!diaUser[dataStr]) diaUser[dataStr] = {};
+      diaUser[dataStr][uid] = (diaUser[dataStr][uid] || 0) + pts;
       atividadeCat[p.categoria][uid] = (atividadeCat[p.categoria][uid] || 0) + 1;
     }
 
-    // Pontos do grupo com cap diario de 35 (equidade entre grupos de 5 e 6)
+    // Etapa 1: cap diário de 35 pts/grupo
     const somaGrp = Object.fromEntries(groups.map(g => [g.id, 0]));
-    for (const [_data, porGrupo] of Object.entries(dia)) {
+    for (const [, porGrupo] of Object.entries(dia)) {
       for (const g of groups) {
         somaGrp[g.id] += Math.min(porGrupo[g.id] || 0, MAX_PONTOS_DIA_GRUPO);
       }
@@ -127,24 +140,40 @@ export default function Dashboard() {
 
     const rankingIndiv = rankingIndivFull.slice(0, 10);
 
-    const porCategoria = groups.map(g => ({
+    const porCategoriaPorGrupo = groups.map(g => ({
       grupo: g.nome,
       Energia: catGrp[g.id].energia,
       Movimento: catGrp[g.id].movimento,
       Mental: catGrp[g.id].mental,
+      Hidratação: catGrp[g.id].hidratacao,
     }));
 
-    // Série temporal acumulada por grupo (com cap diário)
-    const datas = Object.keys(dia).sort();
-    const acum = Object.fromEntries(groups.map(g => [g.id, 0]));
-    const serieTemporal = datas.map(d => {
+    // Série temporal Etapa 1: acumulado por grupo (com cap diário)
+    const datasG = Object.keys(dia).sort();
+    const acumG = Object.fromEntries(groups.map(g => [g.id, 0]));
+    const serieGrupos = datasG.map(d => {
       const row = { data: d.slice(5).replace('-', '/') };
       for (const g of groups) {
-        acum[g.id] += Math.min(dia[d][g.id] || 0, MAX_PONTOS_DIA_GRUPO);
-        row[g.nome] = acum[g.id];
+        acumG[g.id] += Math.min(dia[d][g.id] || 0, MAX_PONTOS_DIA_GRUPO);
+        row[g.nome] = acumG[g.id];
       }
       return row;
     });
+
+    // Série temporal Etapa 2: acumulado individual (top 5)
+    const top5Uids = rankingIndiv.slice(0, 5).map(r => r.id);
+    const datasU = Object.keys(diaUser).sort();
+    const acumU = Object.fromEntries(top5Uids.map(uid => [uid, 0]));
+    const serieIndividuais = datasU.map(d => {
+      const row = { data: d.slice(5).replace('-', '/') };
+      for (const uid of top5Uids) {
+        acumU[uid] += diaUser[d][uid] || 0;
+        const nome = prefById[uid]?.nome_exibicao || '—';
+        row[nome] = acumU[uid];
+      }
+      return row;
+    });
+    const top5Nomes = top5Uids.map(uid => prefById[uid]?.nome_exibicao || '—');
 
     const maisAtivos = {};
     for (const cat of Object.keys(atividadeCat)) {
@@ -155,44 +184,97 @@ export default function Dashboard() {
       }
     }
 
-    return { rankingGrupos, rankingIndiv, rankingIndivFull, porCategoria, serieTemporal, maisAtivos };
+    return {
+      rankingGrupos, rankingIndiv, rankingIndivFull,
+      porCategoriaPorGrupo, catTotal,
+      serieGrupos, serieIndividuais, top5Nomes,
+      maisAtivos,
+    };
   }, [data]);
 
   if (loading) return <div style={{ color: 'var(--branco-45)' }}>Carregando...</div>;
 
-  const maxGrupo = Math.max(1, ...rankingGrupos.map(g => g.pontos));
-  const maxIndiv = Math.max(1, ...rankingIndiv.map(r => r.pontos));
   const totalPosts = data.posts.length;
   const participantes = data.profiles.length;
+  const ehEtapa2 = etapaView === 'etapa2';
 
   return (
     <div>
       <div className="label">Placar geral</div>
-      <h1 style={{ marginBottom: 22 }}>Dashboard</h1>
+      <h1 style={{ marginBottom: 14 }}>Dashboard</h1>
 
+      <Toggle etapa={etapaView} onChange={setEtapaView} />
+
+      {ehEtapa2 ? (
+        <Etapa2View
+          totalPosts={totalPosts}
+          participantes={participantes}
+          agregados={agregados}
+        />
+      ) : (
+        <Etapa1View
+          totalPosts={totalPosts}
+          participantes={participantes}
+          agregados={agregados}
+          groups={data.groups}
+        />
+      )}
+    </div>
+  );
+}
+
+function Toggle({ etapa, onChange }) {
+  const btn = (val, label, sub) => (
+    <button
+      type="button"
+      onClick={() => onChange(val)}
+      className={`btn ${etapa === val ? 'btn-primary' : 'btn-ghost'}`}
+      style={{ flex: 1, padding: '10px 12px', textAlign: 'left' }}
+    >
+      <div style={{ fontFamily: 'Rajdhani', fontWeight: 700, letterSpacing: 1, fontSize: 13 }}>{label}</div>
+      <div style={{ fontSize: 10, color: 'var(--branco-45)', letterSpacing: 0 }}>{sub}</div>
+    </button>
+  );
+  return (
+    <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
+      {btn('etapa2', 'Etapa 2 — atual', '18/05 → 07/06 · individual')}
+      {btn('etapa1', 'Etapa 1 — histórico', '20/04 → 10/05 · grupos')}
+    </div>
+  );
+}
+
+function Etapa2View({ totalPosts, participantes, agregados }) {
+  const { rankingIndiv, porCategoriaPorGrupo, catTotal, serieIndividuais, top5Nomes, maisAtivos } = agregados;
+  const maxIndiv = Math.max(1, ...rankingIndiv.map(r => r.pontos));
+
+  return (
+    <>
       <div className="grid-cards" style={{ marginBottom: 24 }}>
-        <StatCard label="Dia" value={`${diasDecorridos()} / 21`} sub="20/04 → 10/05" />
+        <StatCard label="Dia" value={`${diasDecorridos()} / 21`} sub="18/05 → 07/06" />
         <StatCard label="Registros aprovados" value={totalPosts} />
         <StatCard label="Participantes" value={participantes} />
-        <StatCard label="Grupo líder" value={rankingGrupos[0]?.nome || '—'} cor={rankingGrupos[0]?.cor} sub={`${rankingGrupos[0]?.pontos || 0} pts`} />
+        <StatCard
+          label="Líder"
+          value={rankingIndiv[0]?.nome || '—'}
+          sub={`${rankingIndiv[0]?.pontos || 0} de ${MAX_PONTOS_CICLO} pts`}
+        />
       </div>
 
-      {/* Ranking grupos — expansível */}
-      <h3 style={{ marginBottom: 12 }}>Ranking dos grupos</h3>
+      <h3 style={{ marginBottom: 12 }}>Ranking individual · Top 10</h3>
       <div className="card" style={{ marginBottom: 26 }}>
-        {rankingGrupos.map((g, i) => (
-          <GrupoExpandido
-            key={g.id}
-            grupo={g}
+        {rankingIndiv.length === 0 && <div style={{ color: 'var(--branco-45)' }}>Sem dados ainda.</div>}
+        {rankingIndiv.map((r, i) => (
+          <RankingBar
+            key={r.id} nome={r.nome} pontos={r.pontos}
+            max={Math.max(maxIndiv, MAX_PONTOS_CICLO)}
+            cor={PALETA[i % PALETA.length]}
             posicao={i + 1}
-            max={maxGrupo}
-            membros={rankingIndivFull.filter(r => r.group_id === g.id)}
+            maxAcumulado={MAX_PONTOS_CICLO}
           />
         ))}
       </div>
 
-      {/* Hall dos mais ativos */}
-      <h3 style={{ marginBottom: 12 }}>Hall dos mais ativos</h3>
+      <h3 style={{ marginBottom: 12 }}>Mais ativos por categoria</h3>
       <div className="grid-cards" style={{ marginBottom: 26 }}>
         {Object.entries(CATEGORIAS).map(([key, cat]) => (
           <div key={key} className="card" style={{ borderTopColor: cat.cor }}>
@@ -207,11 +289,116 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Gráfico por categoria stacked */}
+      <h3 style={{ marginBottom: 12 }}>Total de registros por categoria</h3>
+      <div className="card" style={{ marginBottom: 26, height: 260 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={[
+            { categoria: 'Energia', total: catTotal.energia, fill: '#10B981' },
+            { categoria: 'Hidratação', total: catTotal.hidratacao, fill: '#06B6D4' },
+            { categoria: 'Movimento', total: catTotal.movimento, fill: '#3B82F6' },
+            { categoria: 'Mental', total: catTotal.mental, fill: '#8B5CF6' },
+          ]}>
+            <CartesianGrid stroke="rgba(255,255,255,0.05)" />
+            <XAxis dataKey="categoria" stroke="#aaa" style={{ fontSize: 11 }} />
+            <YAxis stroke="#aaa" style={{ fontSize: 11 }} />
+            <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+            <Bar dataKey="total" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <h3 style={{ marginBottom: 12 }}>Evolução acumulada · Top 5</h3>
+      <div className="card" style={{ marginBottom: 26, height: 320 }}>
+        {serieIndividuais.length === 0 ? (
+          <div style={{ color: 'var(--branco-45)', padding: 40, textAlign: 'center' }}>
+            Ainda sem dados suficientes.
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={serieIndividuais}>
+              <CartesianGrid stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="data" stroke="#aaa" style={{ fontSize: 11 }} />
+              <YAxis stroke="#aaa" style={{ fontSize: 11 }} />
+              <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              {top5Nomes.map((nome, i) => (
+                <Line key={nome} type="monotone" dataKey={nome} stroke={PALETA[i % PALETA.length]} strokeWidth={2} dot={false} />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      <h3 style={{ marginBottom: 12 }}>Registros por categoria (legado · grupos da Etapa 1)</h3>
+      <div className="card" style={{ marginBottom: 26, height: 260 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={porCategoriaPorGrupo}>
+            <CartesianGrid stroke="rgba(255,255,255,0.05)" />
+            <XAxis dataKey="grupo" stroke="#aaa" style={{ fontSize: 11 }} />
+            <YAxis stroke="#aaa" style={{ fontSize: 11 }} />
+            <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="Energia" stackId="a" fill="#10B981" />
+            <Bar dataKey="Hidratação" stackId="a" fill="#06B6D4" />
+            <Bar dataKey="Movimento" stackId="a" fill="#3B82F6" />
+            <Bar dataKey="Mental" stackId="a" fill="#8B5CF6" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </>
+  );
+}
+
+function Etapa1View({ totalPosts, participantes, agregados, groups }) {
+  const { rankingGrupos, rankingIndivFull, porCategoriaPorGrupo, serieGrupos, maisAtivos } = agregados;
+  const maxGrupo = Math.max(1, ...rankingGrupos.map(g => g.pontos));
+
+  return (
+    <>
+      <div className="grid-cards" style={{ marginBottom: 24 }}>
+        <StatCard label="Período" value="20/04 → 10/05" sub="21 dias · encerrado" />
+        <StatCard label="Registros aprovados" value={totalPosts} />
+        <StatCard label="Participantes" value={participantes} />
+        <StatCard
+          label="Grupo campeão"
+          value={rankingGrupos[0]?.nome || '—'}
+          cor={rankingGrupos[0]?.cor}
+          sub={`${rankingGrupos[0]?.pontos || 0} pts`}
+        />
+      </div>
+
+      <h3 style={{ marginBottom: 12 }}>Ranking dos grupos</h3>
+      <div className="card" style={{ marginBottom: 26 }}>
+        {rankingGrupos.map((g, i) => (
+          <GrupoExpandido
+            key={g.id}
+            grupo={g}
+            posicao={i + 1}
+            max={maxGrupo}
+            membros={rankingIndivFull.filter(r => r.group_id === g.id)}
+          />
+        ))}
+      </div>
+
+      <h3 style={{ marginBottom: 12 }}>Hall dos mais ativos</h3>
+      <div className="grid-cards" style={{ marginBottom: 26 }}>
+        {Object.entries(CATEGORIAS).filter(([k]) => k !== 'hidratacao').map(([key, cat]) => (
+          <div key={key} className="card" style={{ borderTopColor: cat.cor }}>
+            <div className="label" style={{ color: cat.cor }}>{cat.emoji} {cat.label}</div>
+            <div style={{ fontFamily: 'Rajdhani', fontSize: 22, fontWeight: 700, marginTop: 4 }}>
+              {maisAtivos[key]?.nome || '—'}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--branco-45)' }}>
+              {maisAtivos[key]?.qtd ? `${maisAtivos[key].qtd} registros aprovados` : 'sem registros'}
+            </div>
+          </div>
+        ))}
+      </div>
+
       <h3 style={{ marginBottom: 12 }}>Registros por grupo e categoria</h3>
       <div className="card" style={{ marginBottom: 26, height: 300 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={porCategoria}>
+          <BarChart data={porCategoriaPorGrupo}>
             <CartesianGrid stroke="rgba(255,255,255,0.05)" />
             <XAxis dataKey="grupo" stroke="#aaa" style={{ fontSize: 11 }} />
             <YAxis stroke="#aaa" style={{ fontSize: 11 }} />
@@ -224,38 +411,28 @@ export default function Dashboard() {
         </ResponsiveContainer>
       </div>
 
-      {/* Série temporal */}
       <h3 style={{ marginBottom: 12 }}>Evolução acumulada</h3>
       <div className="card" style={{ marginBottom: 26, height: 320 }}>
-        {serieTemporal.length === 0 ? (
+        {serieGrupos.length === 0 ? (
           <div style={{ color: 'var(--branco-45)', padding: 40, textAlign: 'center' }}>
             Ainda sem dados suficientes.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={serieTemporal}>
+            <LineChart data={serieGrupos}>
               <CartesianGrid stroke="rgba(255,255,255,0.05)" />
               <XAxis dataKey="data" stroke="#aaa" style={{ fontSize: 11 }} />
               <YAxis stroke="#aaa" style={{ fontSize: 11 }} />
               <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              {data.groups.map(g => (
+              {groups.map(g => (
                 <Line key={g.id} type="monotone" dataKey={g.nome} stroke={g.cor} strokeWidth={2} dot={false} />
               ))}
             </LineChart>
           </ResponsiveContainer>
         )}
       </div>
-
-      {/* Top 10 individual */}
-      <h3 style={{ marginBottom: 12 }}>Top 10 individual</h3>
-      <div className="card">
-        {rankingIndiv.length === 0 && <div style={{ color: 'var(--branco-45)' }}>Sem dados ainda.</div>}
-        {rankingIndiv.map((r, i) => (
-          <RankingBar key={r.id} nome={`${r.nome} · ${r.grupo}`} pontos={r.pontos} max={maxIndiv} cor={r.cor} posicao={i + 1} />
-        ))}
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -299,9 +476,7 @@ function GrupoExpandido({ grupo, posicao, max, membros }) {
 
       {aberto && (
         <div style={{
-          marginTop: 10,
-          marginLeft: 20,
-          paddingLeft: 14,
+          marginTop: 10, marginLeft: 20, paddingLeft: 14,
           borderLeft: `2px solid ${grupo.cor}`,
         }}>
           {membrosOrdenados.length === 0 && (

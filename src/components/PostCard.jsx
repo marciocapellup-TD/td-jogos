@@ -1,4 +1,4 @@
-import { CATEGORIAS } from '../lib/scoring';
+import { CATEGORIAS, HORARIO_LABEL } from '../lib/scoring';
 import { formatarDataBR } from '../lib/dates';
 
 function formatarDuracao(minutos, segundos) {
@@ -75,8 +75,21 @@ export default function PostCard({ post, children }) {
       )}
 
       <div style={{ fontSize: 12, color: 'var(--branco-70)' }}>
-        {post.categoria === 'energia' && <>🍎 {post.quantidade_frutas} fruta{post.quantidade_frutas > 1 ? 's' : ''}</>}
-        {post.categoria !== 'energia' && post.minutos != null && <>⏱️ {formatarDuracao(post.minutos, post.segundos)}</>}
+        {post.categoria === 'energia' && post.tipo_alimento === 'fruta' && (
+          <>🍎 {post.quantidade_frutas} fruta{post.quantidade_frutas > 1 ? 's' : ''}</>
+        )}
+        {post.categoria === 'energia' && post.tipo_alimento === 'vegetal' && (
+          <>🥗 Vegetal/Salada</>
+        )}
+        {post.categoria === 'energia' && !post.tipo_alimento && post.quantidade_frutas != null && (
+          <>🍎 {post.quantidade_frutas} fruta{post.quantidade_frutas > 1 ? 's' : ''}</>
+        )}
+        {post.categoria === 'hidratacao' && post.horario && (
+          <>{HORARIO_LABEL[post.horario]?.emoji} {HORARIO_LABEL[post.horario]?.label}</>
+        )}
+        {(post.categoria === 'movimento' || post.categoria === 'mental') && post.minutos != null && (
+          <>⏱️ {formatarDuracao(post.minutos, post.segundos)}</>
+        )}
       </div>
 
       {post.comentario && (

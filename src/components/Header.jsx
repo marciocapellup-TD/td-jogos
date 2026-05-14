@@ -27,11 +27,6 @@ export default function Header() {
         <div className="td-user">
           <div className="td-user-info">
             <span className="td-user-name">{profile?.nome_exibicao}</span>
-            {profile?.groups?.nome && (
-              <span className="td-user-grupo" style={{ color: profile.groups.cor }}>
-                {profile.groups.nome}
-              </span>
-            )}
           </div>
           <button className="btn btn-ghost btn-sm" onClick={handleSignOut}>Sair</button>
         </div>

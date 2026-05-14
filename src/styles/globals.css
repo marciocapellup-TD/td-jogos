@@ -80,6 +80,36 @@ h3 { font-size: 13px; letter-spacing: 2px; color: var(--amarelo); }
   transform-origin: left center;
 }
 
+/* Premiação — chama atenção com pulse + glow amarelo */
+@keyframes premioPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(244,204,4,0.55), 0 0 18px rgba(244,204,4,0.18);
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(244,204,4,0), 0 0 32px rgba(244,204,4,0.38);
+    transform: translateY(-2px) scale(1.02);
+  }
+}
+.premio-pulse {
+  animation: premioPulse 2.2s ease-in-out infinite;
+  border: 1px solid rgba(244,204,4,0.5) !important;
+}
+.premio-pulse-1 { animation-delay: 0s; }
+.premio-pulse-2 { animation-delay: 0.35s; }
+.premio-pulse-3 { animation-delay: 0.7s; }
+
+@keyframes premioBounceEmoji {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-6px) rotate(-6deg); }
+  75% { transform: translateY(-3px) rotate(6deg); }
+}
+.premio-emoji-bounce {
+  display: inline-block;
+  animation: premioBounceEmoji 2.4s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
 .label {
   font-family: 'Rajdhani', sans-serif;
   font-size: 9px;

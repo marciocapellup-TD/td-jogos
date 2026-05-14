@@ -336,6 +336,14 @@ function Grupos() {
 
   return (
     <div className="card">
+      <div style={{
+        background: 'rgba(244,204,4,0.06)',
+        borderLeft: '3px solid var(--amarelo)',
+        padding: '8px 12px', marginBottom: 14, fontSize: 12,
+        color: 'var(--branco-70)',
+      }}>
+        <strong style={{ color: 'var(--amarelo)' }}>Histórico Etapa 1.</strong> A Etapa 2 é individual — os grupos abaixo só aparecem no Dashboard quando você seleciona "Etapa 1 (histórico)".
+      </div>
       <div style={{ fontSize: 12, color: 'var(--branco-70)', marginBottom: 14 }}>
         Alterações refletem imediatamente em todo o app (rankings, dashboards, home).
       </div>

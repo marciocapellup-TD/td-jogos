@@ -231,17 +231,26 @@ export default function Dashboard() {
 }
 
 function Toggle({ etapa, onChange }) {
-  const btn = (val, label, sub) => (
-    <button
-      type="button"
-      onClick={() => onChange(val)}
-      className={`btn ${etapa === val ? 'btn-primary' : 'btn-ghost'}`}
-      style={{ flex: 1, padding: '10px 12px', textAlign: 'left' }}
-    >
-      <div style={{ fontFamily: 'Rajdhani', fontWeight: 700, letterSpacing: 1, fontSize: 13 }}>{label}</div>
-      <div style={{ fontSize: 10, color: 'var(--branco-45)', letterSpacing: 0 }}>{sub}</div>
-    </button>
-  );
+  const btn = (val, label, sub) => {
+    const ativo = etapa === val;
+    return (
+      <button
+        type="button"
+        onClick={() => onChange(val)}
+        className={`btn ${ativo ? 'btn-primary' : 'btn-ghost'}`}
+        style={{ flex: 1, padding: '10px 12px', textAlign: 'left' }}
+      >
+        <div style={{
+          fontFamily: 'Rajdhani', fontWeight: 700, letterSpacing: 1, fontSize: 13,
+          color: ativo ? 'var(--azul)' : undefined,
+        }}>{label}</div>
+        <div style={{
+          fontSize: 10, letterSpacing: 0,
+          color: ativo ? 'rgba(1,31,54,0.7)' : 'var(--branco-45)',
+        }}>{sub}</div>
+      </button>
+    );
+  };
   return (
     <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
       {btn('etapa2', 'Etapa 2 — atual', '18/05 → 07/06 · individual')}

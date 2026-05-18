@@ -70,7 +70,7 @@ export default function Regras() {
           titulo="Energia"
           pontos="até +3 pts/dia"
           descricao="2 frutas (+1 cada) + 1 vegetal/salada no almoço ou janta (+1)"
-          limite="Posta as frutas em 1 registro e o vegetal/salada em outro"
+          limite="Frutas: até 2/dia, em 1 ou 2 posts · Vegetal: 1/dia"
         />
         <CategoriaCard
           emoji="💧"

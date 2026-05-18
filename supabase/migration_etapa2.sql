@@ -74,11 +74,13 @@ ALTER TABLE posts ADD CONSTRAINT chk_categoria_campos CHECK (
 
 -- ---------------------------------------------------------------------------
 -- 4) Unique partial indexes (impede duplicata por dia) — só Etapa 2
---    A Etapa 1 permitia 2 posts de fruta com qtd=1 cada (totalizando 2).
---    Esse histórico fica intocado; o índice só vale para datas >= 18/05/2026.
+--    Frutas: até 2 posts/dia somando max 2 frutas (validado no trigger).
+--    Vegetal: 1/dia.
+--    Hidratação: 1 por horário/dia.
 -- ---------------------------------------------------------------------------
 DROP INDEX IF EXISTS uniq_hidratacao_horario_dia;
 DROP INDEX IF EXISTS uniq_energia_tipo_alimento_dia;
+DROP INDEX IF EXISTS uniq_energia_vegetal_dia;
 
 CREATE UNIQUE INDEX uniq_hidratacao_horario_dia
   ON posts (user_id, data_registro, horario)
@@ -86,9 +88,10 @@ CREATE UNIQUE INDEX uniq_hidratacao_horario_dia
     AND status <> 'rejected'
     AND data_registro >= DATE '2026-05-18';
 
-CREATE UNIQUE INDEX uniq_energia_tipo_alimento_dia
-  ON posts (user_id, data_registro, tipo_alimento)
+CREATE UNIQUE INDEX uniq_energia_vegetal_dia
+  ON posts (user_id, data_registro)
   WHERE categoria = 'energia'
+    AND tipo_alimento = 'vegetal'
     AND status <> 'rejected'
     AND data_registro >= DATE '2026-05-18';
 
@@ -192,7 +195,7 @@ $$;
 
 -- ---------------------------------------------------------------------------
 -- 7) Trigger enforce_daily_limits — limites por categoria/tipo/horário
---    - Energia/fruta: 1 post/dia (quantidade_frutas 1-2 dentro do post)
+--    - Energia/fruta: até 2 posts/dia somando no máximo 2 frutas
 --    - Energia/vegetal: 1 post/dia
 --    - Hidratacao: 1 por horário (já garantido pelo unique index acima)
 --    - Movimento/Mental: 1 por dia (mantido)
@@ -200,6 +203,7 @@ $$;
 CREATE OR REPLACE FUNCTION enforce_daily_limits() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE
   v_count int;
+  v_sum_frutas int;
   v_self_id uuid := coalesce(NEW.id, '00000000-0000-0000-0000-000000000000'::uuid);
 BEGIN
   IF NEW.status = 'rejected' THEN
@@ -207,14 +211,15 @@ BEGIN
   END IF;
 
   IF NEW.categoria = 'energia' AND NEW.tipo_alimento = 'fruta' THEN
-    SELECT count(*) INTO v_count FROM posts
+    SELECT coalesce(sum(quantidade_frutas), 0) INTO v_sum_frutas FROM posts
      WHERE user_id = NEW.user_id
        AND data_registro = NEW.data_registro
        AND categoria = 'energia' AND tipo_alimento = 'fruta'
        AND status <> 'rejected'
        AND id <> v_self_id;
-    IF v_count >= 1 THEN
-      RAISE EXCEPTION 'Você já registrou frutas hoje (máx 1 post de frutas/dia)';
+    IF v_sum_frutas + coalesce(NEW.quantidade_frutas, 0) > 2 THEN
+      RAISE EXCEPTION 'Limite diário de frutas excedido. Você já registrou % fruta(s) hoje; só pode mais %.',
+        v_sum_frutas, GREATEST(0, 2 - v_sum_frutas);
     END IF;
 
   ELSIF NEW.categoria = 'energia' AND NEW.tipo_alimento = 'vegetal' THEN

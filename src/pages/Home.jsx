@@ -130,7 +130,7 @@ export default function Home() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: 16 }}>
             <div>
               <div style={{ fontSize: 22 }}>🍎 <strong>+1 pt</strong></div>
-              <div style={{ fontSize: 12, color: 'var(--branco-70)' }}>por fruta · máx 2/dia</div>
+              <div style={{ fontSize: 12, color: 'var(--branco-70)' }}>por fruta · até 2/dia (1-2 posts)</div>
             </div>
             <div>
               <div style={{ fontSize: 22 }}>🥗 <strong>+1 pt</strong></div>

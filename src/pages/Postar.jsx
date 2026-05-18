@@ -67,6 +67,20 @@ export default function Postar() {
     return () => { supabase.removeChannel(canal); };
   }, [profile?.id, categoria]);
 
+  // Clamp quantidadeFrutas quando o restante diminui (ex: depois de aprovar 1 fruta,
+  // o seletor padrão de 2 frutas precisa cair pra 1).
+  useEffect(() => {
+    if (categoria !== 'energia') return;
+    const valida = postsHoje.filter(p => p.status !== 'rejected');
+    const somaFrutas = valida
+      .filter(p => p.tipo_alimento === 'fruta')
+      .reduce((acc, p) => acc + (p.quantidade_frutas || 0), 0);
+    const restantes = Math.max(0, 2 - somaFrutas);
+    if (restantes > 0 && quantidadeFrutas > restantes) {
+      setQuantidadeFrutas(restantes);
+    }
+  }, [postsHoje, categoria, quantidadeFrutas]);
+
   if (!cat) return <div>Categoria inválida.</div>;
 
   // Posts válidos do dia (não rejeitados) — ocupam slot.
@@ -74,7 +88,14 @@ export default function Postar() {
   const postsRejeitadosHoje = postsHoje.filter(p => p.status === 'rejected');
 
   // Tipo-alimento já registrado hoje
-  const jaTemFrutas  = categoria === 'energia' && postsValidos.some(p => p.tipo_alimento === 'fruta');
+  // Frutas: até 2 posts/dia somando max 2 frutas. Vegetal: 1/dia.
+  const frutasJaPostadas = categoria === 'energia'
+    ? postsValidos
+        .filter(p => p.tipo_alimento === 'fruta')
+        .reduce((acc, p) => acc + (p.quantidade_frutas || 0), 0)
+    : 0;
+  const frutasRestantes = Math.max(0, 2 - frutasJaPostadas);
+  const jaTemFrutas  = categoria === 'energia' && frutasRestantes === 0;
   const jaTemVegetal = categoria === 'energia' && postsValidos.some(p => p.tipo_alimento === 'vegetal');
   const horariosUsados = categoria === 'hidratacao'
     ? new Set(postsValidos.map(p => p.horario))
@@ -83,7 +104,7 @@ export default function Postar() {
 
   // Bloqueios para o slot atual
   const bloqueioEnergia = categoria === 'energia' && (
-    (tipoAlimento === 'fruta'   && jaTemFrutas) ||
+    (tipoAlimento === 'fruta'   && Number(quantidadeFrutas) > frutasRestantes) ||
     (tipoAlimento === 'vegetal' && jaTemVegetal)
   );
   const bloqueioHidratacao = categoria === 'hidratacao' && horariosUsados.has(horario);
@@ -210,24 +231,37 @@ export default function Postar() {
                 })}
               </div>
 
-              {tipoAlimento === 'fruta' && (
+              {tipoAlimento === 'fruta' && frutasRestantes === 0 && (
+                <div style={{ fontSize: 12, color: 'var(--branco-70)' }}>
+                  Você já registrou 2 frutas hoje. Pode postar vegetal/salada se ainda não tiver.
+                </div>
+              )}
+
+              {tipoAlimento === 'fruta' && frutasRestantes > 0 && (
                 <>
-                  <label>Quantas frutas você comeu?</label>
+                  <label>Quantas frutas você comeu agora?</label>
                   <div style={{ display: 'flex', gap: 10 }}>
-                    {[1, 2].map(n => (
-                      <button
-                        type="button"
-                        key={n}
-                        onClick={() => setQuantidadeFrutas(n)}
-                        className={`btn ${quantidadeFrutas === n ? 'btn-primary' : 'btn-ghost'}`}
-                        style={{ flex: 1 }}
-                      >
-                        🍎 {n} fruta{n > 1 ? 's' : ''}
-                      </button>
-                    ))}
+                    {[1, 2].map(n => {
+                      const desabilitada = n > frutasRestantes;
+                      return (
+                        <button
+                          type="button"
+                          key={n}
+                          onClick={() => !desabilitada && setQuantidadeFrutas(n)}
+                          disabled={desabilitada}
+                          className={`btn ${quantidadeFrutas === n ? 'btn-primary' : 'btn-ghost'}`}
+                          style={{ flex: 1, opacity: desabilitada ? 0.35 : 1, cursor: desabilitada ? 'not-allowed' : 'pointer' }}
+                          title={desabilitada ? `Só sobra ${frutasRestantes} fruta no dia` : ''}
+                        >
+                          🍎 {n} fruta{n > 1 ? 's' : ''}
+                        </button>
+                      );
+                    })}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 6 }}>
-                    +1 pt por fruta · máximo 2/dia em 1 post
+                    {frutasJaPostadas > 0
+                      ? <>Hoje você já registrou <strong>{frutasJaPostadas} fruta{frutasJaPostadas > 1 ? 's' : ''}</strong>. Pode postar mais <strong>{frutasRestantes}</strong>.</>
+                      : <>+1 pt por fruta · até 2/dia (em 1 ou 2 posts)</>}
                   </div>
                 </>
               )}

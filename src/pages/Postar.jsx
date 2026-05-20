@@ -81,6 +81,16 @@ export default function Postar() {
     }
   }, [postsHoje, categoria, quantidadeFrutas]);
 
+  // Default do horário de hidratacao baseado na hora local do navegador.
+  // Ex: às 14h, o padrão é "tarde" (não "manha"). Só ajusta no mount/troca de categoria.
+  useEffect(() => {
+    if (categoria !== 'hidratacao') return;
+    const h = new Date().getHours();
+    const sugerido = h <= 11 ? 'manha' : h <= 17 ? 'tarde' : 'noite';
+    setHorario(sugerido);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoria]);
+
   if (!cat) return <div>Categoria inválida.</div>;
 
   // Posts válidos do dia (não rejeitados) — ocupam slot.
@@ -102,12 +112,24 @@ export default function Postar() {
     : new Set();
   const jaPostouMovMental = (categoria === 'movimento' || categoria === 'mental') && postsValidos.length > 0;
 
+  // Janela de horário para hidratacao baseada na hora LOCAL do navegador do usuário.
+  // Espelha a validação SQL em enforce_daily_limits (que usa profiles.timezone).
+  // Manhã: 00-11, Tarde: 12-17, Noite: 18-23.
+  const horaLocalAtual = new Date().getHours();
+  const horarioPermitido = {
+    manha: horaLocalAtual >= 0 && horaLocalAtual <= 11,
+    tarde: horaLocalAtual >= 12 && horaLocalAtual <= 17,
+    noite: horaLocalAtual >= 18 && horaLocalAtual <= 23,
+  };
+
   // Bloqueios para o slot atual
   const bloqueioEnergia = categoria === 'energia' && (
     (tipoAlimento === 'fruta'   && Number(quantidadeFrutas) > frutasRestantes) ||
     (tipoAlimento === 'vegetal' && jaTemVegetal)
   );
-  const bloqueioHidratacao = categoria === 'hidratacao' && horariosUsados.has(horario);
+  const bloqueioHidratacao = categoria === 'hidratacao' && (
+    horariosUsados.has(horario) || !horarioPermitido[horario]
+  );
   const bloqueado = encerrada || aindaNaoComecou || bloqueioEnergia || bloqueioHidratacao || jaPostouMovMental;
 
   const minParsed = Math.max(0, Math.min(999, Number(minutosInput) || 0));
@@ -281,23 +303,36 @@ export default function Postar() {
                 {HORARIOS.map(h => {
                   const ativo = horario === h;
                   const ocupado = horariosUsados.has(h);
+                  const foraJanela = !horarioPermitido[h];
+                  const desabilitado = ocupado || foraJanela;
+                  const motivo = ocupado
+                    ? 'Já registrado hoje'
+                    : foraJanela
+                      ? `${HORARIO_LABEL[h].label}: fora da janela do horário atual`
+                      : '';
                   return (
                     <button
                       type="button"
                       key={h}
-                      onClick={() => setHorario(h)}
+                      onClick={() => !desabilitado && setHorario(h)}
+                      disabled={desabilitado}
                       className={`btn ${ativo ? 'btn-primary' : 'btn-ghost'}`}
-                      style={{ flex: 1, opacity: ocupado ? 0.5 : 1 }}
-                      title={ocupado ? 'Já registrado hoje' : ''}
+                      style={{
+                        flex: 1,
+                        opacity: desabilitado ? 0.4 : 1,
+                        cursor: desabilitado ? 'not-allowed' : 'pointer',
+                      }}
+                      title={motivo}
                     >
                       {HORARIO_LABEL[h].emoji} {HORARIO_LABEL[h].label}
                       {ocupado && ' ✓'}
+                      {!ocupado && foraJanela && ' 🕒'}
                     </button>
                   );
                 })}
               </div>
               <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 6 }}>
-                +1 pt por horário registrado · 3 horários por dia (manhã, tarde, noite)
+                +1 pt por horário · Manhã 00h-12h · Tarde 12h-18h · Noite 18h-00h (seu fuso)
               </div>
             </div>
           )}

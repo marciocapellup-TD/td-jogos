@@ -1,12 +1,18 @@
-// Helpers de data TZ-safe para garantir que o "hoje" e a exibição usem
-// sempre o calendário LOCAL do usuário (Brasília), não UTC.
+// Helpers de data TZ-safe. Sempre retornam a data do calendário de Brasília,
+// independente do fuso do navegador. Isso garante consistência com o trigger SQL
+// force_data_registro_hoje (que também força fuso 'America/Sao_Paulo').
+//
+// Necessário porque temos participantes em outros fusos (ex: Mariane em Londres).
+// Sem isso, o filtro "posts de hoje" no front desincronizava do data_registro do banco.
+
+const _formatterBR = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Sao_Paulo',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+});
 
 export function hojeISO() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  // en-CA formata como YYYY-MM-DD direto, sempre no fuso de Brasília.
+  return _formatterBR.format(new Date());
 }
 
 // Recebe string "YYYY-MM-DD" e devolve "DD/MM/YYYY" sem conversão de timezone.

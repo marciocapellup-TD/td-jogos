@@ -46,10 +46,22 @@ export default function FotoUpload({ userId, onUploaded, urlAtual = null }) {
     }
 
     const { data } = supabase.storage.from('postagens').getPublicUrl(path);
+    const publicUrl = data?.publicUrl;
+
+    // Defesa: se getPublicUrl não retornou URL válida, falha visível em vez de
+    // deixar o botão "Enviar" preso em estado disabled silencioso (bug histórico
+    // que afetou várias usuárias com posts perdidos pela manhã).
+    if (!publicUrl || !/^https?:\/\//i.test(publicUrl)) {
+      console.error('[upload] publicUrl inválida:', data);
+      setErro('Falha ao gerar URL pública da foto. Tente enviar de novo ou troque a foto.');
+      setUploading(false);
+      return;
+    }
+
     setUploading(false);
     setSucesso(true);
     setTrocouFoto(true);
-    onUploaded(data.publicUrl);
+    onUploaded(publicUrl);
   };
 
   const onChangeCamera  = (e) => processar(e.target.files?.[0]);

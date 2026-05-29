@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { CATEGORIAS, HORARIO_LABEL, TIPO_ALIMENTO_LABEL, previewPontos } from '../lib/scoring';
 import { calculaSemanaAtual, metasDaSemana, MAX_PONTOS_DIA_PESSOA } from '../lib/weeks';
-import { hojeISO } from '../lib/dates';
+import { hojeISO, horaBR } from '../lib/dates';
 import { competicaoEncerrada, entreEtapas, statusEtapa } from '../lib/competicao';
 import FotoUpload from '../components/FotoUpload';
 
@@ -81,11 +81,12 @@ export default function Postar() {
     }
   }, [postsHoje, categoria, quantidadeFrutas]);
 
-  // Default do horário de hidratacao baseado na hora local do navegador.
-  // Ex: às 14h, o padrão é "tarde" (não "manha"). Só ajusta no mount/troca de categoria.
+  // Default do horário de hidratacao baseado na hora atual em Brasília (não no
+  // fuso do navegador). Ex: às 14h BR, o padrão é "tarde" pra todo mundo,
+  // mesmo se o navegador estiver em Londres marcando 18h.
   useEffect(() => {
     if (categoria !== 'hidratacao') return;
-    const h = new Date().getHours();
+    const h = horaBR();
     const sugerido = h <= 11 ? 'manha' : h <= 17 ? 'tarde' : 'noite';
     setHorario(sugerido);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,10 +113,10 @@ export default function Postar() {
     : new Set();
   const jaPostouMovMental = (categoria === 'movimento' || categoria === 'mental') && postsValidos.length > 0;
 
-  // Janela de horário para hidratacao baseada na hora LOCAL do navegador do usuário.
-  // Espelha a validação SQL em enforce_daily_limits (que usa profiles.timezone).
-  // Manhã: 00-11, Tarde: 12-17, Noite: 18-23.
-  const horaLocalAtual = new Date().getHours();
+  // Janela de horário para hidratacao ancorada em horário de Brasília pra todo
+  // mundo (espelha a validação SQL em enforce_daily_limits).
+  // Manhã: 00-11, Tarde: 12-17, Noite: 18-23 — sempre em BR.
+  const horaLocalAtual = horaBR();
   const horarioPermitido = {
     manha: horaLocalAtual >= 0 && horaLocalAtual <= 11,
     tarde: horaLocalAtual >= 12 && horaLocalAtual <= 17,
@@ -332,7 +333,7 @@ export default function Postar() {
                 })}
               </div>
               <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 6 }}>
-                +1 pt por horário · Manhã 00h-12h · Tarde 12h-18h · Noite 18h-00h (seu fuso)
+                +1 pt por horário · Manhã 00h-12h · Tarde 12h-18h · Noite 18h-00h (horário de Brasília)
               </div>
             </div>
           )}

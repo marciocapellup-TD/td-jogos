@@ -19,6 +19,7 @@ export default function Admin() {
           ['grupos', 'Grupos'],
           ['excecoes', 'Exceções'],
           ['aprovados', 'Posts aprovados'],
+          ['limpeza', 'Limpeza'],
         ].map(([k, l]) => (
           <button
             key={k}
@@ -40,6 +41,107 @@ export default function Admin() {
       {aba === 'grupos' && <Grupos />}
       {aba === 'excecoes' && <Excecoes />}
       {aba === 'aprovados' && <Aprovados />}
+      {aba === 'limpeza' && <Limpeza />}
+    </div>
+  );
+}
+
+function Limpeza() {
+  const [pendentes, setPendentes] = useState(null);
+  const [rodando, setRodando] = useState(false);
+  const [resultado, setResultado] = useState(null);
+  const [erro, setErro] = useState(null);
+
+  // Conta candidatos: aprovados, foto_liberada=false, foto_url começa com https://, >4h
+  const contar = async () => {
+    const corte = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+    const { count, error } = await supabase
+      .from('posts')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'approved')
+      .eq('foto_liberada', false)
+      .lt('created_at', corte)
+      .like('foto_url', 'https://%');
+    if (error) { setErro(error.message); return; }
+    setPendentes(count ?? 0);
+  };
+  useEffect(() => { contar(); }, []);
+
+  const limparAgora = async () => {
+    setErro(null);
+    setResultado(null);
+    setRodando(true);
+    const { data, error } = await supabase.functions.invoke('limpar-fotos-aprovadas', {
+      body: {},
+    });
+    setRodando(false);
+    if (error) { setErro(error.message || 'Erro ao invocar edge function'); return; }
+    setResultado(data);
+    contar();
+  };
+
+  return (
+    <div>
+      <div style={{
+        background: 'rgba(244,204,4,0.08)',
+        border: '1px solid rgba(244,204,4,0.3)',
+        borderLeft: '3px solid var(--amarelo)',
+        padding: '12px 16px', borderRadius: 3, marginBottom: 18, fontSize: 13,
+        lineHeight: 1.6,
+      }}>
+        <strong>Limpeza automática de fotos:</strong> roda 3x/dia (09h, 15h, 21h BR)
+        e remove fotos do Storage de posts <strong>aprovados há mais de 4h</strong>.
+        O post continua valendo (pontos, comentários) e mostra placeholder "🗑️ Foto removida".
+        Use o botão abaixo se precisar limpar fora dos horários.
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11, color: 'var(--branco-45)', letterSpacing: 1 }}>
+            CANDIDATOS A LIMPAR AGORA
+          </div>
+          <div style={{ fontSize: 28, fontFamily: 'Rajdhani', fontWeight: 700, color: 'var(--amarelo)' }}>
+            {pendentes === null ? '...' : pendentes}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={limparAgora}
+          disabled={rodando || pendentes === 0}
+          className="btn btn-primary"
+          style={{ padding: '14px 22px' }}
+        >
+          {rodando ? 'Limpando...' : '🧹 Limpar agora'}
+        </button>
+      </div>
+
+      {erro && (
+        <div style={{
+          background: 'rgba(192,57,43,0.12)',
+          borderLeft: '3px solid var(--vermelho)',
+          padding: '8px 12px', fontSize: 12, color: '#fff', marginBottom: 10,
+        }}>
+          Erro: {erro}
+        </div>
+      )}
+
+      {resultado && (
+        <div style={{
+          background: 'rgba(16,185,129,0.12)',
+          borderLeft: '3px solid var(--verde)',
+          padding: '10px 14px', fontSize: 13, color: '#fff', marginBottom: 10,
+        }}>
+          <strong>Removidas:</strong> {resultado.removidas ?? 0}
+          {resultado.candidatos_total != null && resultado.candidatos_total !== resultado.removidas && (
+            <> · candidatos totais: {resultado.candidatos_total}</>
+          )}
+          {Array.isArray(resultado.erros) && resultado.erros.length > 0 && (
+            <div style={{ fontSize: 11, color: 'var(--vermelho)', marginTop: 6 }}>
+              {resultado.erros.length} erro(s): {resultado.erros.slice(0, 3).map(e => e.razao).join(' · ')}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

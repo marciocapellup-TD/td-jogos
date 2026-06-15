@@ -8,9 +8,9 @@ export default function BannerCompeticao() {
     return (
       <Faixa background="var(--amarelo)" color="var(--azul)" borderBottom="2px solid rgba(0,0,0,0.15)">
         <strong style={{ fontSize: 17, letterSpacing: 1, textTransform: 'uppercase' }}>
-          ⚡ Etapa 2 começa em 18/05!
+          ⚡ Etapa 3 começa em 22/06!
         </strong>{' '}
-        21 dias, metas maiores, agora individual. Veja as regras e prepare a estratégia. Bora!
+        30 dias corridos, 6 pilares e sem teto de pontos. Veja as regras e prepare a estratégia. Bora!
       </Faixa>
     );
   }
@@ -21,7 +21,7 @@ export default function BannerCompeticao() {
         <strong style={{ fontSize: 17, letterSpacing: 1, textTransform: 'uppercase' }}>
           🔥 Último dia!
         </strong>{' '}
-        Hoje é a reta final da Etapa 2. Cada ponto conta — registre tudo que fizer hoje. Bora!
+        Hoje é a reta final da Etapa 3. Cada ponto conta — registre tudo que fizer hoje. Bora!
       </Faixa>
     );
   }
@@ -37,7 +37,7 @@ export default function BannerCompeticao() {
       borderBottom: '1px solid var(--amarelo)',
     }}>
       <strong style={{ color: 'var(--amarelo)' }}>Competição encerrada.</strong>{' '}
-      Obrigado pela dedicação nesses 21 dias da Etapa 2! O ranking final tá fixo e em breve a gente solta as próximas metas. 💪
+      Obrigado pela dedicação nesses 30 dias da Etapa 3! O ranking final tá fixo e em breve a gente solta as próximas metas. 💪
     </div>
   );
 }

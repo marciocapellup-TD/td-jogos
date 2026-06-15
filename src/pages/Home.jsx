@@ -164,6 +164,23 @@ export default function Home() {
               <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 4 }}>
                 {cat.dica}
               </div>
+              {cat.meta && (
+                <div style={{
+                  marginTop: 8,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: cat.cor,
+                  background: `${cat.cor}1A`,
+                  border: `1px solid ${cat.cor}40`,
+                  borderRadius: 999,
+                  padding: '3px 9px',
+                }}>
+                  🎯 {cat.meta}
+                </div>
+              )}
             </div>
           );
           if (desabilitado) return <div key={key}>{conteudo}</div>;

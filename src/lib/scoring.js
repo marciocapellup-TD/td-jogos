@@ -79,13 +79,14 @@ function etapaDe(dataObj) {
 
 // 6 pilares da Etapa 3. A ordem define a ordem dos cards na Home.
 // (energia = só frutas; salada/vegetal virou pilar próprio; cultura é novo)
+// `meta` = referência de meta mínima diária (não limita pontos; é só o alvo do dia).
 export const CATEGORIAS = {
-  energia:    { label: 'Energia',    emoji: '🍎', cor: '#10B981', dica: 'Foto de fruta(s) — 1 ponto por fruta, sem limite' },
-  salada:     { label: 'Salada',     emoji: '🥗', cor: '#22C55E', dica: 'Salada/vegetal no almoço ou janta — 1 ponto por refeição' },
-  hidratacao: { label: 'Hidratação', emoji: '💧', cor: '#06B6D4', dica: 'Garrafinha + horário — 1 ponto por registro, sem limite' },
-  movimento:  { label: 'Movimento',  emoji: '🏃', cor: '#3B82F6', dica: 'Print de exercício — 5 pontos a cada 50 min' },
-  mental:     { label: 'Mental',     emoji: '🧠', cor: '#8B5CF6', dica: 'Print de meditação — 4 pontos a cada 10 min' },
-  cultura:    { label: 'Cultura',    emoji: '🎭', cor: '#F59E0B', dica: 'Livro, podcast, hobby, passeio ou exposição — 3 pontos' },
+  energia:    { label: 'Energia',    emoji: '🍎', cor: '#10B981', dica: 'Foto de fruta(s) — 1 ponto por fruta, sem limite',         meta: 'Meta do dia: 3 frutas' },
+  salada:     { label: 'Salada',     emoji: '🥗', cor: '#22C55E', dica: 'Salada/vegetal no almoço ou janta — 1 ponto por refeição', meta: 'Meta do dia: 2 refeições (almoço e janta)' },
+  hidratacao: { label: 'Hidratação', emoji: '💧', cor: '#06B6D4', dica: 'Garrafinha + horário — 1 ponto por registro, sem limite',  meta: 'Meta do dia: 3 registros (manhã, tarde, noite)' },
+  movimento:  { label: 'Movimento',  emoji: '🏃', cor: '#3B82F6', dica: 'Print de exercício — 5 pontos a cada 50 min',              meta: 'Meta do dia: 50 min' },
+  mental:     { label: 'Mental',     emoji: '🧠', cor: '#8B5CF6', dica: 'Print de meditação — 4 pontos a cada 10 min',              meta: 'Meta do dia: 10 min' },
+  cultura:    { label: 'Cultura',    emoji: '🎭', cor: '#F59E0B', dica: 'Livro, podcast, hobby, passeio ou exposição — 3 pontos',    meta: 'Meta do dia: 1 atividade' },
 };
 
 // Labels auxiliares pra UI

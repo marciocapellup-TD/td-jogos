@@ -11,6 +11,7 @@ import {
 import RankingBar from '../components/RankingBar';
 import StatCard from '../components/StatCard';
 import Podio from '../components/Podio';
+import PodioGrupos from '../components/PodioGrupos';
 import { PREMIOS_ETAPA2, PREMIOS_ETAPA3 } from '../lib/premios';
 import { useAuth } from '../hooks/useAuth';
 
@@ -37,7 +38,7 @@ function ordenarRanking(a, b) {
 export default function Dashboard() {
   const { isAdmin } = useAuth();
   const [etapaView, setEtapaView] = useState('etapa3'); // 'etapa1' | 'etapa2' | 'etapa3'
-  const [data, setData] = useState({ posts: [], profiles: [], groups: [], resultado: [] });
+  const [data, setData] = useState({ posts: [], profiles: [], groups: [], resultado: [], resultadoGrupo: [] });
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [congelando, setCongelando] = useState(false);
@@ -45,14 +46,18 @@ export default function Dashboard() {
   // Congela o resultado oficial da etapa selecionada (admin). Server-side via RPC
   // SECURITY DEFINER — o cliente nunca grava direto em resultado_etapa.
   const congelarResultado = async () => {
-    const jaCongelado = data.resultado.length > 0;
+    // Etapa 1 é por grupo (cap-aware) → RPC dedicada; Etapa 2/3 são individuais.
+    const ehGrupo = etapaView === 'etapa1';
+    const jaCongelado = (ehGrupo ? data.resultadoGrupo : data.resultado).length > 0;
     const label = etapaView === 'etapa3' ? 'Etapa 3' : etapaView === 'etapa2' ? 'Etapa 2' : 'Etapa 1';
     const msg = jaCongelado
       ? `Recongelar vai RECALCULAR o resultado oficial da ${label} com os posts aprovados agora. Continuar?`
       : `Congelar o resultado oficial da ${label} com os posts aprovados agora? Isso fixa o pódio e o ranking final.`;
     if (!window.confirm(msg)) return;
     setCongelando(true);
-    const { error } = await supabase.rpc('congelar_resultado_etapa', { p_etapa: etapaView });
+    const { error } = ehGrupo
+      ? await supabase.rpc('congelar_resultado_grupo', { p_etapa: etapaView })
+      : await supabase.rpc('congelar_resultado_etapa', { p_etapa: etapaView });
     setCongelando(false);
     if (error) { alert(error.message); return; }
     setRefreshKey((k) => k + 1);
@@ -76,11 +81,12 @@ export default function Dashboard() {
         .order('nome_exibicao');
       if (etapaView !== 'etapa1') profQuery = profQuery.eq('ativo', true);
 
-      const [posts, profRes, groupRes, resRes] = await Promise.all([
+      const [posts, profRes, groupRes, resRes, resGrpRes] = await Promise.all([
         fetchAllApprovedPosts('*', janela),
         profQuery,
         supabase.from('groups').select('*').order('id'),
         supabase.from('resultado_etapa').select('*').eq('etapa', etapaView).order('posicao'),
+        supabase.from('resultado_etapa_grupo').select('*').eq('etapa', etapaView).order('posicao'),
       ]);
       if (!mounted) return;
       setData({
@@ -88,6 +94,7 @@ export default function Dashboard() {
         profiles: profRes.data || [],
         groups: groupRes.data || [],
         resultado: resRes.data || [],
+        resultadoGrupo: resGrpRes.data || [],
       });
       setLoading(false);
     };
@@ -258,6 +265,10 @@ export default function Dashboard() {
           participantes={participantes}
           agregados={agregados}
           groups={data.groups}
+          resultadoGrupo={data.resultadoGrupo}
+          isAdmin={isAdmin}
+          onCongelar={congelarResultado}
+          congelando={congelando}
         />
       )}
     </div>
@@ -437,21 +448,55 @@ function EtapaIndividualView({ etapa, totalPosts, participantes, agregados, resu
   );
 }
 
-function Etapa1View({ totalPosts, participantes, agregados, groups }) {
+function Etapa1View({ totalPosts, participantes, agregados, groups, resultadoGrupo = [], isAdmin, onCongelar, congelando }) {
   const { rankingGrupos, rankingIndivFull, porCategoriaPorGrupo, serieGrupos, maisAtivos } = agregados;
   const maxGrupo = Math.max(1, ...rankingGrupos.map(g => g.pontos));
 
+  // Encerramento: se há snapshot congelado, é o resultado oficial; senão, prévia ao vivo.
+  const congelado = resultadoGrupo.length > 0;
+  const fonteFinal = congelado
+    ? resultadoGrupo.map(r => ({ nome: r.grupo_nome, pontos: r.pontos, cor: r.grupo_cor, posicao: r.posicao }))
+    : rankingGrupos.map((g, i) => ({ nome: g.nome, pontos: g.pontos, cor: g.cor, posicao: i + 1 }));
+  const top3 = fonteFinal.slice(0, 3);
+  const campeao = fonteFinal[0];
+  const congeladoEm = congelado ? new Date(resultadoGrupo[0].congelado_em).toLocaleDateString('pt-BR') : null;
+
   return (
     <>
+      {/* Encerramento — pódio oficial dos grupos */}
+      <div style={{ marginBottom: 30 }}>
+        <h3 style={{ marginBottom: 4 }}>
+          {congelado ? '🏆 Resultado Oficial · Etapa 1' : 'Prévia do resultado final · Etapa 1'}
+        </h3>
+        <div style={{ fontSize: 11, color: 'var(--branco-45)', marginBottom: 14 }}>
+          {congelado
+            ? `Disputa por grupos (cap de 35 pts/dia por grupo). Ranking oficial congelado em ${congeladoEm} — não muda mais.`
+            : 'Disputa por grupos (cap de 35 pts/dia por grupo). Ainda não congelado — ranking ao vivo dos posts aprovados.'}
+        </div>
+
+        <PodioGrupos top3={top3} />
+
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={onCongelar}
+            disabled={congelando}
+            className={`btn ${congelado ? 'btn-ghost' : 'btn-primary cta-pulse'}`}
+          >
+            {congelando ? 'Congelando...' : congelado ? 'Recongelar (recalcular)' : 'Congelar resultado final'}
+          </button>
+        )}
+      </div>
+
       <div className="grid-cards" style={{ marginBottom: 24 }}>
         <StatCard label="Período" value="20/04 → 10/05" sub="21 dias · encerrado" />
         <StatCard label="Registros aprovados" value={totalPosts} />
         <StatCard label="Participantes" value={participantes} />
         <StatCard
           label="Grupo campeão"
-          value={rankingGrupos[0]?.nome || '—'}
-          cor={rankingGrupos[0]?.cor}
-          sub={`${rankingGrupos[0]?.pontos || 0} pts`}
+          value={campeao?.nome || '—'}
+          cor={campeao?.cor}
+          sub={`${campeao?.pontos || 0} pts`}
         />
       </div>
 

@@ -1,12 +1,32 @@
 // Regras do desafio — mantidas em sincronia com a função SQL calcular_pontos.
-// Etapa 2 (18/05 → 07/06/2026) é a competição ATUAL. Etapa 1 (20/04 → 10/05)
-// permanece como histórico para a vista do Dashboard.
+// Etapa 3 (22/06 → 21/07/2026) é a competição ATUAL: 30 dias corridos, metas
+// PLANAS (não mudam por semana) e SEM teto. Etapas 1 e 2 ficam como histórico.
 
-// ---------- Etapa 2 (atual) ----------
-export const DATA_INICIO = new Date(2026, 4, 18); // 18/05/2026 (seg)
-export const DATA_FIM    = new Date(2026, 5, 7);  //  7/06/2026 (dom)
-export const TOTAL_DIAS_DESAFIO = 21;
+// ---------- Etapa 3 (atual) ----------
+export const DATA_INICIO_ETAPA3 = new Date(2026, 5, 22); // 22/06/2026 (seg)
+export const DATA_FIM_ETAPA3    = new Date(2026, 6, 21); // 21/07/2026 (ter)
+export const TOTAL_DIAS_ETAPA3  = 30;
 
+// Aliases "atual" → Etapa 3
+export const DATA_INICIO = DATA_INICIO_ETAPA3;
+export const DATA_FIM    = DATA_FIM_ETAPA3;
+export const TOTAL_DIAS_DESAFIO = TOTAL_DIAS_ETAPA3;
+
+// Metas Etapa 3 — pontuação por unidade, planas, SEM teto. As "meta_min_dia"
+// são só referência de meta mínima diária (não limitam pontos).
+export const METAS_ETAPA3 = {
+  energia:    { pts_por_fruta: 1, meta_min_dia: 3 },
+  salada:     { pts: 1, meta_min_dia: 2 },
+  hidratacao: { pts: 1, meta_min_dia: 3, horarios: ['manha', 'tarde', 'noite'] },
+  movimento:  { meta_min: 50, bloco_min: 50, pts_por_bloco: 5 },
+  mental:     { meta_min: 10, bloco_min: 10, pts_por_bloco: 4 },
+  cultura:    { pts: 3, tipos: ['livro', 'podcast', 'hobby', 'passeio', 'exposicao'] },
+};
+export const METAS = METAS_ETAPA3;
+
+// ---------- Etapa 2 (histórico) ----------
+export const DATA_INICIO_ETAPA2 = new Date(2026, 4, 18); // 18/05/2026
+export const DATA_FIM_ETAPA2    = new Date(2026, 5, 7);  //  7/06/2026
 export const METAS_ETAPA2 = {
   movimento: { 1: 40, 2: 45, 3: 50 },
   mental:    { 1: 5,  2: 6,  3: 7  },
@@ -15,10 +35,7 @@ export const METAS_ETAPA2 = {
   hidratacao_horarios: ['manha', 'tarde', 'noite'],
 };
 
-// Alias (compat com chamadas antigas — agora aponta para Etapa 2)
-export const METAS = METAS_ETAPA2;
-
-// Max diário por pessoa (Etapa 2): 2 frutas + 1 vegetal + 3 hidratação + 4 mov + 2 mental
+// Caps da Etapa 2 (histórico — NÃO usar nas telas da Etapa 3, que não tem teto)
 export const MAX_PONTOS_DIA_PESSOA = 12;
 export const MAX_PONTOS_CICLO = 252; // 12 × 21
 
@@ -54,8 +71,9 @@ export function calculaSemanaAtual(hoje = new Date()) {
 }
 
 // Calcula semana baseada na etapa. Útil para o Dashboard que mostra Etapa 1 e 2.
+// Só Etapas 1 e 2 têm semanas (metas crescentes). A Etapa 3 é plana — não usa.
 export function calculaSemana(hoje = new Date(), etapa = 'etapa2') {
-  const inicio = etapa === 'etapa1' ? DATA_INICIO_ETAPA1 : DATA_INICIO;
+  const inicio = etapa === 'etapa1' ? DATA_INICIO_ETAPA1 : DATA_INICIO_ETAPA2;
   const diff = daysBetween(hoje, inicio);
   if (diff < 0) return 0;
   const semana = Math.floor(diff / 7) + 1;

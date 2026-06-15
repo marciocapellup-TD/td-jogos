@@ -2,13 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase, fetchAllApprovedPosts } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
-import {
-  calculaSemanaAtual, metasDaSemana, diasRestantes, diasDecorridos,
-  MAX_PONTOS_DIA_PESSOA, MAX_PONTOS_CICLO,
-} from '../lib/weeks';
-import { hojeISO } from '../lib/dates';
+import { diasRestantes, diasDecorridos } from '../lib/weeks';
 import { CATEGORIAS } from '../lib/scoring';
-import { competicaoEncerrada, entreEtapas, DATA_INICIO_ETAPA2, DATA_FIM_ETAPA2 } from '../lib/competicao';
+import { competicaoEncerrada, entreEtapas, DATA_INICIO_ETAPA3, DATA_FIM_ETAPA3 } from '../lib/competicao';
 import StatCard from '../components/StatCard';
 import RankingBar from '../components/RankingBar';
 
@@ -26,24 +22,21 @@ const PALETA = ['#F4CC04', '#3B82F6', '#10B981', '#8B5CF6', '#F97316', '#EC4899'
 
 export default function Home() {
   const { profile } = useAuth();
-  const semana = calculaSemanaAtual();
-  const metas = metasDaSemana(semana);
   const encerrada = competicaoEncerrada();
   const aindaNaoComecou = entreEtapas();
+  const emAndamento = !encerrada && !aindaNaoComecou;
   const [rankingIndividual, setRankingIndividual] = useState([]);
   const [meusPontos, setMeusPontos] = useState(0);
   const [meuRank, setMeuRank] = useState(null);
-  const [pontosHoje, setPontosHoje] = useState(0);
 
   useEffect(() => {
     let mounted = true;
 
     const fetchAll = async () => {
-      const hoje = hojeISO();
       const [posts, profilesRes] = await Promise.all([
         fetchAllApprovedPosts(
           'pontos, user_id, categoria, data_registro, created_at',
-          { dataDe: DATA_INICIO_ETAPA2, dataAte: DATA_FIM_ETAPA2 },
+          { dataDe: DATA_INICIO_ETAPA3, dataAte: DATA_FIM_ETAPA3 },
         ),
         supabase.from('profiles').select('id, nome_exibicao, ativo').eq('ativo', true),
       ]);
@@ -51,25 +44,21 @@ export default function Home() {
 
       const profiles = profilesRes.data || [];
 
-      // Agrega por usuário
       const porUser = {};
       for (const p of posts) {
         if (!(p.pontos > 0)) continue;
         const uid = p.user_id;
-        if (!porUser[uid]) porUser[uid] = { total: 0, hoje: 0, ultimoPostAt: null };
+        if (!porUser[uid]) porUser[uid] = { total: 0, ultimoPostAt: null };
         porUser[uid].total += p.pontos;
-        if (p.data_registro === hoje) porUser[uid].hoje += p.pontos;
         if (p.created_at && (!porUser[uid].ultimoPostAt || p.created_at > porUser[uid].ultimoPostAt)) {
           porUser[uid].ultimoPostAt = p.created_at;
         }
       }
 
-      // Lista todos os participantes ativos, mesmo zerados (aparecem no final)
       const lista = profiles.map(p => ({
         id: p.id,
         nome: p.nome_exibicao,
         pontos: porUser[p.id]?.total || 0,
-        pontosHoje: porUser[p.id]?.hoje || 0,
         ultimoPostAt: porUser[p.id]?.ultimoPostAt || null,
       })).sort(ordenarRanking);
 
@@ -78,7 +67,6 @@ export default function Home() {
       if (profile?.id) {
         const eu = lista.find(x => x.id === profile.id);
         setMeusPontos(eu?.pontos || 0);
-        setPontosHoje(eu?.pontosHoje || 0);
         setMeuRank(eu ? lista.findIndex(x => x.id === profile.id) + 1 : null);
       }
     };
@@ -111,65 +99,36 @@ export default function Home() {
       {/* Stats topo */}
       <div className="grid-cards" style={{ marginBottom: 24 }}>
         <StatCard
-          label={semana >= 1 && semana <= 3 ? `Semana ${semana} de 3` : aindaNaoComecou ? 'Pré-etapa 2' : 'Encerrado'}
-          value={semana >= 1 && semana <= 3 ? `${diasDecorridos()}/21` : '—'}
-          sub="dias decorridos"
+          label={emAndamento ? 'Dia do desafio' : aindaNaoComecou ? 'Pré-Etapa 3' : 'Encerrado'}
+          value={emAndamento ? `${diasDecorridos()}/30` : '—'}
+          sub="22/06 → 21/07"
         />
-        <StatCard label="Dias restantes" value={diasRestantes()} sub="até 07/06" />
+        <StatCard label="Dias restantes" value={diasRestantes()} sub="até 21/07" />
         <StatCard
           label="Seus pontos"
           value={meusPontos}
-          sub={meuRank ? `${meuRank}º lugar` : `de ${MAX_PONTOS_CICLO} possíveis`}
+          sub={meuRank ? `${meuRank}º lugar` : 'sem teto — vá além!'}
         />
       </div>
 
-      {/* Metas da semana */}
-      {metas && (
-        <div className="card" style={{ marginBottom: 24 }}>
-          <div className="label" style={{ marginBottom: 10 }}>Metas desta semana</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: 16 }}>
-            <div>
-              <div style={{ fontSize: 22 }}>🍎 <strong>+1 pt</strong></div>
-              <div style={{ fontSize: 12, color: 'var(--branco-70)' }}>por fruta · até 2/dia (1-2 posts)</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 22 }}>🥗 <strong>+1 pt</strong></div>
-              <div style={{ fontSize: 12, color: 'var(--branco-70)' }}>1 vegetal/salada/dia</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 22 }}>💧 <strong>+1 pt</strong></div>
-              <div style={{ fontSize: 12, color: 'var(--branco-70)' }}>por horário · 3/dia</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 22 }}>🏃 <strong>+{metas.movimento.pontos} pt</strong></div>
-              <div style={{ fontSize: 12, color: 'var(--branco-70)' }}>≥ {metas.movimento.minutos} min/dia</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 22 }}>🧠 <strong>+{metas.mental.pontos} pt</strong></div>
-              <div style={{ fontSize: 12, color: 'var(--branco-70)' }}>≥ {metas.mental.minutos} min/dia</div>
-            </div>
-          </div>
-          <div style={{
-            marginTop: 14, paddingTop: 10,
-            borderTop: '1px solid rgba(255,255,255,0.06)',
-            fontSize: 11, color: 'var(--branco-45)', letterSpacing: 1,
-            fontFamily: 'Rajdhani', fontWeight: 600, textTransform: 'uppercase',
-          }}>
-            Máximo por dia: {MAX_PONTOS_DIA_PESSOA} pts · {MAX_PONTOS_CICLO} pts no ciclo
-            {pontosHoje > 0 && (
-              <span style={{ marginLeft: 12, color: pontosHoje >= MAX_PONTOS_DIA_PESSOA ? 'var(--verde)' : 'var(--amarelo)' }}>
-                · Você hoje: {pontosHoje}/{MAX_PONTOS_DIA_PESSOA}
-              </span>
-            )}
-          </div>
+      {/* Como pontuar (Etapa 3 — planas, sem teto) */}
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div className="label" style={{ marginBottom: 10 }}>Como pontuar · sem teto, quanto mais você faz mais pontua</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 14 }}>
+          <Pilar emoji="🍎" pts="+1 / fruta" desc="meta 3 frutas/dia" />
+          <Pilar emoji="🥗" pts="+1 / refeição" desc="salada no almoço e janta" />
+          <Pilar emoji="💧" pts="+1 / registro" desc="manhã, tarde e noite" />
+          <Pilar emoji="🏃" pts="+5 / 50 min" desc="movimento, constância" />
+          <Pilar emoji="🧠" pts="+4 / 10 min" desc="mental, constância" />
+          <Pilar emoji="🎭" pts="+3 / atividade" desc="cultura (livro, podcast...)" />
         </div>
-      )}
+      </div>
 
       {/* CTAs postar */}
       <h3 style={{ marginBottom: 12 }}>Registrar agora</h3>
       {encerrada && (
         <AvisoBox>
-          <strong>Registro pausado.</strong> A competição encerrou em 07/06 — aguarde as próximas metas.{' '}
+          <strong>Registro pausado.</strong> A Etapa 3 encerrou em 21/07.{' '}
           <Link to="/dashboard" style={{ color: 'var(--amarelo)', textDecoration: 'underline' }}>
             Veja o pódio e o ranking final no Dashboard.
           </Link>
@@ -177,7 +136,7 @@ export default function Home() {
       )}
       {aindaNaoComecou && (
         <AvisoBox>
-          <strong>Etapa 2 começa em 18/05.</strong> Os registros abrem nessa data.
+          <strong>Etapa 3 começa em 22/06.</strong> Os registros abrem nessa data — 30 dias corridos.
         </AvisoBox>
       )}
       <div className="grid-cards" style={{ marginBottom: 30 }}>
@@ -224,7 +183,7 @@ export default function Home() {
         ) : topN.every(x => x.pontos === 0) ? (
           <>
             <div style={{ color: 'var(--branco-45)', fontSize: 12, marginBottom: 10, textAlign: 'center' }}>
-              Placar zerado — a Etapa 2 começa em 18/05.
+              Placar zerado — a Etapa 3 começa em 22/06.
             </div>
             {topN.map((u, i) => (
               <RankingBar
@@ -241,12 +200,9 @@ export default function Home() {
                 key={u.id}
                 nome={ehVoce ? `${u.nome} (você)` : u.nome}
                 pontos={u.pontos}
-                max={Math.max(maxPontos, MAX_PONTOS_CICLO)}
+                max={maxPontos}
                 cor={ehVoce ? 'var(--amarelo)' : PALETA[i % PALETA.length]}
                 posicao={i + 1}
-                pontosHoje={u.pontosHoje}
-                maxHoje={MAX_PONTOS_DIA_PESSOA}
-                maxAcumulado={MAX_PONTOS_CICLO}
               />
             );
           })
@@ -258,16 +214,22 @@ export default function Home() {
             <RankingBar
               nome={`${profile.nome_exibicao} (você)`}
               pontos={meusPontos}
-              max={Math.max(maxPontos, MAX_PONTOS_CICLO)}
+              max={maxPontos}
               cor="var(--amarelo)"
               posicao={meuRank}
-              pontosHoje={pontosHoje}
-              maxHoje={MAX_PONTOS_DIA_PESSOA}
-              maxAcumulado={MAX_PONTOS_CICLO}
             />
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function Pilar({ emoji, pts, desc }) {
+  return (
+    <div>
+      <div style={{ fontSize: 20 }}>{emoji} <strong style={{ color: 'var(--amarelo)' }}>{pts}</strong></div>
+      <div style={{ fontSize: 12, color: 'var(--branco-70)' }}>{desc}</div>
     </div>
   );
 }

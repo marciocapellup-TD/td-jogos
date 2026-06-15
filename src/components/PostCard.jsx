@@ -1,4 +1,4 @@
-import { CATEGORIAS, HORARIO_LABEL } from '../lib/scoring';
+import { CATEGORIAS, HORARIO_LABEL, CULTURA_LABEL } from '../lib/scoring';
 import { formatarDataBR } from '../lib/dates';
 
 function formatarDuracao(minutos, segundos) {
@@ -83,6 +83,10 @@ export default function PostCard({ post, children }) {
         )}
         {post.categoria === 'energia' && !post.tipo_alimento && post.quantidade_frutas != null && (
           <>🍎 {post.quantidade_frutas} fruta{post.quantidade_frutas > 1 ? 's' : ''}</>
+        )}
+        {post.categoria === 'salada' && (<>🥗 Salada / vegetal</>)}
+        {post.categoria === 'cultura' && post.tipo_cultura && (
+          <>{CULTURA_LABEL[post.tipo_cultura]?.emoji} {CULTURA_LABEL[post.tipo_cultura]?.label}</>
         )}
         {post.categoria === 'hidratacao' && post.horario && (
           <>{HORARIO_LABEL[post.horario]?.emoji} {HORARIO_LABEL[post.horario]?.label}</>

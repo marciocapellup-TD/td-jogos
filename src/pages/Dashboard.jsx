@@ -6,11 +6,12 @@ import { CATEGORIAS } from '../lib/scoring';
 import {
   DATA_INICIO_ETAPA1, DATA_FIM_ETAPA1,
   DATA_INICIO_ETAPA2, DATA_FIM_ETAPA2,
+  DATA_INICIO_ETAPA3, DATA_FIM_ETAPA3,
 } from '../lib/competicao';
 import RankingBar from '../components/RankingBar';
 import StatCard from '../components/StatCard';
 import Podio from '../components/Podio';
-import { PREMIOS_ETAPA2 } from '../lib/premios';
+import { PREMIOS_ETAPA2, PREMIOS_ETAPA3 } from '../lib/premios';
 import { useAuth } from '../hooks/useAuth';
 
 const CHART_TOOLTIP_STYLE = {
@@ -35,22 +36,23 @@ function ordenarRanking(a, b) {
 
 export default function Dashboard() {
   const { isAdmin } = useAuth();
-  const [etapaView, setEtapaView] = useState('etapa2'); // 'etapa1' | 'etapa2'
+  const [etapaView, setEtapaView] = useState('etapa3'); // 'etapa1' | 'etapa2' | 'etapa3'
   const [data, setData] = useState({ posts: [], profiles: [], groups: [], resultado: [] });
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [congelando, setCongelando] = useState(false);
 
-  // Congela o resultado oficial da etapa atual (admin). Server-side via RPC
+  // Congela o resultado oficial da etapa selecionada (admin). Server-side via RPC
   // SECURITY DEFINER — o cliente nunca grava direto em resultado_etapa.
   const congelarResultado = async () => {
     const jaCongelado = data.resultado.length > 0;
+    const label = etapaView === 'etapa3' ? 'Etapa 3' : etapaView === 'etapa2' ? 'Etapa 2' : 'Etapa 1';
     const msg = jaCongelado
-      ? 'Recongelar vai RECALCULAR o resultado oficial da Etapa 2 com os posts aprovados agora. Continuar?'
-      : 'Congelar o resultado oficial da Etapa 2 com os posts aprovados agora? Isso fixa o pódio e o ranking final.';
+      ? `Recongelar vai RECALCULAR o resultado oficial da ${label} com os posts aprovados agora. Continuar?`
+      : `Congelar o resultado oficial da ${label} com os posts aprovados agora? Isso fixa o pódio e o ranking final.`;
     if (!window.confirm(msg)) return;
     setCongelando(true);
-    const { error } = await supabase.rpc('congelar_resultado_etapa', { p_etapa: 'etapa2' });
+    const { error } = await supabase.rpc('congelar_resultado_etapa', { p_etapa: etapaView });
     setCongelando(false);
     if (error) { alert(error.message); return; }
     setRefreshKey((k) => k + 1);
@@ -61,16 +63,18 @@ export default function Dashboard() {
 
     const janela = etapaView === 'etapa1'
       ? { dataDe: DATA_INICIO_ETAPA1, dataAte: DATA_FIM_ETAPA1 }
-      : { dataDe: DATA_INICIO_ETAPA2, dataAte: DATA_FIM_ETAPA2 };
+      : etapaView === 'etapa2'
+        ? { dataDe: DATA_INICIO_ETAPA2, dataAte: DATA_FIM_ETAPA2 }
+        : { dataDe: DATA_INICIO_ETAPA3, dataAte: DATA_FIM_ETAPA3 };
 
     const fetchAll = async () => {
       if (mounted) setLoading(true);
-      // Etapa 2: só profiles ativos (quem saiu da TD não aparece no ranking).
+      // Etapa 2/3 (individual): só profiles ativos.
       // Etapa 1: todos os profiles (preserva histórico de quem participou e depois saiu).
       let profQuery = supabase.from('profiles')
         .select('id, nome_exibicao, group_id, ativo')
         .order('nome_exibicao');
-      if (etapaView === 'etapa2') profQuery = profQuery.eq('ativo', true);
+      if (etapaView !== 'etapa1') profQuery = profQuery.eq('ativo', true);
 
       const [posts, profRes, groupRes, resRes] = await Promise.all([
         fetchAllApprovedPosts('*', janela),
@@ -115,11 +119,11 @@ export default function Dashboard() {
     const somaUser = {};
     const ultimoUser = {};
     const ultimoGrupo = Object.fromEntries(groups.map(g => [g.id, null]));
-    const catGrp = Object.fromEntries(groups.map(g => [g.id, { energia: 0, movimento: 0, mental: 0, hidratacao: 0 }]));
-    const catTotal = { energia: 0, movimento: 0, mental: 0, hidratacao: 0 };
+    const catGrp = Object.fromEntries(groups.map(g => [g.id, { energia: 0, salada: 0, movimento: 0, mental: 0, hidratacao: 0, cultura: 0 }]));
+    const catTotal = { energia: 0, salada: 0, movimento: 0, mental: 0, hidratacao: 0, cultura: 0 };
     const dia = {};                  // {dataIso: {gid: pts}} (etapa1)
-    const diaUser = {};              // {dataIso: {uid: pts}} (etapa2)
-    const atividadeCat = { energia: {}, movimento: {}, mental: {}, hidratacao: {} };
+    const diaUser = {};              // {dataIso: {uid: pts}} (etapa2/3)
+    const atividadeCat = { energia: {}, salada: {}, movimento: {}, mental: {}, hidratacao: {}, cultura: {} };
 
     for (const p of posts) {
       const uid = p.user_id;
@@ -226,7 +230,7 @@ export default function Dashboard() {
 
   const totalPosts = data.posts.length;
   const participantes = data.profiles.length;
-  const ehEtapa2 = etapaView === 'etapa2';
+  const ehIndividual = etapaView === 'etapa2' || etapaView === 'etapa3';
 
   return (
     <div>
@@ -235,8 +239,9 @@ export default function Dashboard() {
 
       <Toggle etapa={etapaView} onChange={setEtapaView} />
 
-      {ehEtapa2 ? (
-        <Etapa2View
+      {ehIndividual ? (
+        <EtapaIndividualView
+          etapa={etapaView}
           totalPosts={totalPosts}
           participantes={participantes}
           agregados={agregados}
@@ -244,6 +249,8 @@ export default function Dashboard() {
           isAdmin={isAdmin}
           onCongelar={congelarResultado}
           congelando={congelando}
+          premios={etapaView === 'etapa3' ? PREMIOS_ETAPA3 : PREMIOS_ETAPA2}
+          maxAcumulado={etapaView === 'etapa3' ? null : MAX_PONTOS_CICLO}
         />
       ) : (
         <Etapa1View
@@ -279,16 +286,19 @@ function Toggle({ etapa, onChange }) {
     );
   };
   return (
-    <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
-      {btn('etapa2', 'Etapa 2 — atual', '18/05 → 07/06 · individual')}
+    <div style={{ display: 'flex', gap: 8, marginBottom: 22, flexWrap: 'wrap' }}>
+      {btn('etapa3', 'Etapa 3 — atual', '22/06 → 21/07 · individual')}
+      {btn('etapa2', 'Etapa 2 — histórico', '18/05 → 07/06 · individual')}
       {btn('etapa1', 'Etapa 1 — histórico', '20/04 → 10/05 · grupos')}
     </div>
   );
 }
 
-function Etapa2View({ totalPosts, participantes, agregados, resultado = [], isAdmin, onCongelar, congelando }) {
-  const { rankingIndiv, rankingIndivFull, porCategoriaPorGrupo, catTotal, serieIndividuais, top5Nomes, maisAtivos } = agregados;
+function EtapaIndividualView({ etapa, totalPosts, participantes, agregados, resultado = [], isAdmin, onCongelar, congelando, premios, maxAcumulado }) {
+  const { rankingIndiv, rankingIndivFull, catTotal, serieIndividuais, top5Nomes, maisAtivos } = agregados;
   const maxIndiv = Math.max(1, ...rankingIndiv.map(r => r.pontos));
+  const ehAtual = etapa === 'etapa3';
+  const etapaLabel = ehAtual ? 'Etapa 3' : 'Etapa 2';
 
   // Encerramento: se há snapshot congelado, é o resultado oficial; senão, prévia ao vivo.
   const congelado = resultado.length > 0;
@@ -296,7 +306,7 @@ function Etapa2View({ totalPosts, participantes, agregados, resultado = [], isAd
     ? resultado.map(r => ({ id: r.user_id, nome: r.nome_exibicao, pontos: r.pontos, posicao: r.posicao }))
     : rankingIndivFull.map((r, i) => ({ id: r.id, nome: r.nome, pontos: r.pontos, posicao: i + 1 }));
   const top3 = fonteFinal.slice(0, 3).map(r => ({ posicao: r.posicao, nome: r.nome, pontos: r.pontos }));
-  const maxFinal = Math.max(1, MAX_PONTOS_CICLO, ...fonteFinal.map(r => r.pontos));
+  const maxFinal = Math.max(1, maxAcumulado || 0, ...fonteFinal.map(r => r.pontos));
   const congeladoEm = congelado ? new Date(resultado[0].congelado_em).toLocaleDateString('pt-BR') : null;
 
   return (
@@ -304,7 +314,7 @@ function Etapa2View({ totalPosts, participantes, agregados, resultado = [], isAd
       {/* Encerramento — pódio + ranking final oficial */}
       <div style={{ marginBottom: 30 }}>
         <h3 style={{ marginBottom: 4 }}>
-          {congelado ? '🏆 Resultado Oficial · Etapa 2' : 'Prévia do resultado final'}
+          {congelado ? `🏆 Resultado Oficial · ${etapaLabel}` : 'Prévia do resultado final'}
         </h3>
         <div style={{ fontSize: 11, color: 'var(--branco-45)', marginBottom: 14 }}>
           {congelado
@@ -312,7 +322,7 @@ function Etapa2View({ totalPosts, participantes, agregados, resultado = [], isAd
             : 'Ainda não congelado — ranking ao vivo dos posts aprovados.'}
         </div>
 
-        <Podio top3={top3} premios={PREMIOS_ETAPA2} maxAcumulado={MAX_PONTOS_CICLO} />
+        <Podio top3={top3} premios={premios} maxAcumulado={maxAcumulado || undefined} />
 
         <h3 style={{ marginBottom: 12 }}>Ranking final completo</h3>
         <div className="card" style={{ marginBottom: 14 }}>
@@ -323,7 +333,7 @@ function Etapa2View({ totalPosts, participantes, agregados, resultado = [], isAd
               max={maxFinal}
               cor={PALETA[i % PALETA.length]}
               posicao={r.posicao}
-              maxAcumulado={MAX_PONTOS_CICLO}
+              maxAcumulado={maxAcumulado || undefined}
             />
           ))}
         </div>
@@ -341,13 +351,15 @@ function Etapa2View({ totalPosts, participantes, agregados, resultado = [], isAd
       </div>
 
       <div className="grid-cards" style={{ marginBottom: 24 }}>
-        <StatCard label="Dia" value={`${diasDecorridos()} / 21`} sub="18/05 → 07/06" />
+        {ehAtual
+          ? <StatCard label="Dia" value={`${diasDecorridos()} / 30`} sub="22/06 → 21/07" />
+          : <StatCard label="Período" value="18/05 → 07/06" sub="21 dias · encerrado" />}
         <StatCard label="Registros aprovados" value={totalPosts} />
         <StatCard label="Participantes" value={participantes} />
         <StatCard
           label="Líder"
           value={rankingIndiv[0]?.nome || '—'}
-          sub={`${rankingIndiv[0]?.pontos || 0} de ${MAX_PONTOS_CICLO} pts`}
+          sub={`${rankingIndiv[0]?.pontos || 0}${maxAcumulado ? ` de ${maxAcumulado} pts` : ' pts'}`}
         />
       </div>
 
@@ -357,10 +369,10 @@ function Etapa2View({ totalPosts, participantes, agregados, resultado = [], isAd
         {rankingIndiv.map((r, i) => (
           <RankingBar
             key={r.id} nome={r.nome} pontos={r.pontos}
-            max={Math.max(maxIndiv, MAX_PONTOS_CICLO)}
+            max={maxAcumulado ? Math.max(maxIndiv, maxAcumulado) : maxIndiv}
             cor={PALETA[i % PALETA.length]}
             posicao={i + 1}
-            maxAcumulado={MAX_PONTOS_CICLO}
+            maxAcumulado={maxAcumulado || undefined}
           />
         ))}
       </div>
@@ -384,10 +396,12 @@ function Etapa2View({ totalPosts, participantes, agregados, resultado = [], isAd
       <div className="card" style={{ marginBottom: 26, height: 260 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={[
-            { categoria: 'Energia', total: catTotal.energia, fill: '#10B981' },
-            { categoria: 'Hidratação', total: catTotal.hidratacao, fill: '#06B6D4' },
-            { categoria: 'Movimento', total: catTotal.movimento, fill: '#3B82F6' },
-            { categoria: 'Mental', total: catTotal.mental, fill: '#8B5CF6' },
+            { categoria: 'Energia', total: catTotal.energia || 0, fill: '#10B981' },
+            { categoria: 'Salada', total: catTotal.salada || 0, fill: '#22C55E' },
+            { categoria: 'Hidratação', total: catTotal.hidratacao || 0, fill: '#06B6D4' },
+            { categoria: 'Movimento', total: catTotal.movimento || 0, fill: '#3B82F6' },
+            { categoria: 'Mental', total: catTotal.mental || 0, fill: '#8B5CF6' },
+            { categoria: 'Cultura', total: catTotal.cultura || 0, fill: '#F59E0B' },
           ]}>
             <CartesianGrid stroke="rgba(255,255,255,0.05)" />
             <XAxis dataKey="categoria" stroke="#aaa" style={{ fontSize: 11 }} />
@@ -418,23 +432,6 @@ function Etapa2View({ totalPosts, participantes, agregados, resultado = [], isAd
             </LineChart>
           </ResponsiveContainer>
         )}
-      </div>
-
-      <h3 style={{ marginBottom: 12 }}>Registros por categoria (legado · grupos da Etapa 1)</h3>
-      <div className="card" style={{ marginBottom: 26, height: 260 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={porCategoriaPorGrupo}>
-            <CartesianGrid stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="grupo" stroke="#aaa" style={{ fontSize: 11 }} />
-            <YAxis stroke="#aaa" style={{ fontSize: 11 }} />
-            <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
-            <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Bar dataKey="Energia" stackId="a" fill="#10B981" />
-            <Bar dataKey="Hidratação" stackId="a" fill="#06B6D4" />
-            <Bar dataKey="Movimento" stackId="a" fill="#3B82F6" />
-            <Bar dataKey="Mental" stackId="a" fill="#8B5CF6" />
-          </BarChart>
-        </ResponsiveContainer>
       </div>
     </>
   );
@@ -473,7 +470,7 @@ function Etapa1View({ totalPosts, participantes, agregados, groups }) {
 
       <h3 style={{ marginBottom: 12 }}>Hall dos mais ativos</h3>
       <div className="grid-cards" style={{ marginBottom: 26 }}>
-        {Object.entries(CATEGORIAS).filter(([k]) => k !== 'hidratacao').map(([key, cat]) => (
+        {Object.entries(CATEGORIAS).filter(([k]) => !['hidratacao', 'salada', 'cultura'].includes(k)).map(([key, cat]) => (
           <div key={key} className="card" style={{ borderTopColor: cat.cor }}>
             <div className="label" style={{ color: cat.cor }}>{cat.emoji} {cat.label}</div>
             <div style={{ fontFamily: 'Rajdhani', fontSize: 22, fontWeight: 700, marginTop: 4 }}>

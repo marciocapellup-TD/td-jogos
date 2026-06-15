@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { CATEGORIAS, HORARIO_LABEL, TIPO_ALIMENTO_LABEL, previewPontos } from '../lib/scoring';
-import { calculaSemanaAtual, metasDaSemana } from '../lib/weeks';
+import { CATEGORIAS, HORARIO_LABEL, TIPO_ALIMENTO_LABEL, CULTURA_LABEL, previewPontos } from '../lib/scoring';
 import { formatarDataBR } from '../lib/dates';
 import FotoUpload from '../components/FotoUpload';
 
@@ -83,8 +82,6 @@ export default function EditarPost() {
   }
 
   const cat = CATEGORIAS[post.categoria];
-  const semanaPost = calculaSemanaAtual(new Date(post.data_registro + 'T12:00:00')); // semana baseada na data do post
-  const metas = metasDaSemana(semanaPost);
 
   const minParsed = Math.max(0, Math.min(999, Number(minutosInput) || 0));
   const segParsed = Math.max(0, Math.min(59, Number(segundosInput) || 0));
@@ -202,25 +199,31 @@ export default function EditarPost() {
         {ehEnergiaFruta && (
           <div className="form-group">
             <label>Quantas frutas você comeu?</label>
-            <div style={{ display: 'flex', gap: 10 }}>
-              {[1, 2].map(n => (
-                <button
-                  type="button"
-                  key={n}
-                  onClick={() => setQuantidadeFrutas(n)}
-                  className={`btn ${quantidadeFrutas === n ? 'btn-primary' : 'btn-ghost'}`}
-                  style={{ flex: 1 }}
-                >
-                  🍎 {n} fruta{n > 1 ? 's' : ''}
-                </button>
-              ))}
-            </div>
+            <input
+              className="input" type="number" inputMode="numeric" min="1" max="99"
+              value={quantidadeFrutas}
+              onChange={e => setQuantidadeFrutas(e.target.value.replace(/[^\d]/g, ''))}
+              style={{ textAlign: 'center', fontSize: 20, fontFamily: 'Rajdhani', fontWeight: 700, maxWidth: 120 }}
+            />
+            <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 6 }}>1 ponto por fruta.</div>
           </div>
         )}
 
         {ehEnergiaVegetal && (
           <div className="form-group" style={{ fontSize: 13, color: 'var(--branco-70)' }}>
             {TIPO_ALIMENTO_LABEL.vegetal.emoji} <strong>{TIPO_ALIMENTO_LABEL.vegetal.label}</strong> — só dá pra trocar a foto ou o comentário (vale +1 pt fixo).
+          </div>
+        )}
+
+        {post.categoria === 'salada' && (
+          <div className="form-group" style={{ fontSize: 13, color: 'var(--branco-70)' }}>
+            🥗 <strong>Salada / vegetal</strong> — dá pra trocar a foto ou o comentário (vale +1 pt fixo).
+          </div>
+        )}
+
+        {post.categoria === 'cultura' && (
+          <div className="form-group" style={{ fontSize: 13, color: 'var(--branco-70)' }}>
+            {CULTURA_LABEL[post.tipo_cultura]?.emoji} <strong>Cultura · {CULTURA_LABEL[post.tipo_cultura]?.label}</strong> — dá pra trocar a foto ou o comentário (vale +3 pts fixo).
           </div>
         )}
 
@@ -235,7 +238,7 @@ export default function EditarPost() {
             <label>
               Duração registrada no app
               <span style={{ fontSize: 10, color: 'var(--branco-45)', marginLeft: 8, letterSpacing: 0 }}>
-                (meta semana {semanaPost || '?'}: {post.categoria === 'movimento' ? metas?.movimento.minutos : metas?.mental.minutos} min)
+                ({post.categoria === 'movimento' ? '5 pts a cada 50 min' : '4 pts a cada 10 min'})
               </span>
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -317,7 +320,7 @@ export default function EditarPost() {
           {post.status === 'approved' ? 'Após salvar' : 'Se aprovado'}, vale <strong style={{ color: 'var(--amarelo)', fontSize: 18 }}>+{pontosPreview} pt</strong>
           {pontosPreview === 0 && temDuracao && (minParsed > 0 || segParsed > 0) && (
             <div style={{ fontSize: 11, color: 'var(--vermelho)', letterSpacing: 0, marginTop: 4 }}>
-              (abaixo da meta da semana — sem pontos)
+              (abaixo do mínimo para pontuar)
             </div>
           )}
         </div>

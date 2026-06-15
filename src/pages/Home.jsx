@@ -169,7 +169,10 @@ export default function Home() {
       <h3 style={{ marginBottom: 12 }}>Registrar agora</h3>
       {encerrada && (
         <AvisoBox>
-          <strong>Registro pausado.</strong> A competição encerrou em 07/06 — aguarde as próximas metas.
+          <strong>Registro pausado.</strong> A competição encerrou em 07/06 — aguarde as próximas metas.{' '}
+          <Link to="/dashboard" style={{ color: 'var(--amarelo)', textDecoration: 'underline' }}>
+            Veja o pódio e o ranking final no Dashboard.
+          </Link>
         </AvisoBox>
       )}
       {aindaNaoComecou && (

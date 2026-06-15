@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { METAS_ETAPA2, METAS_ETAPA1, MAX_PONTOS_DIA_PESSOA, MAX_PONTOS_CICLO } from '../lib/weeks';
 import { CATEGORIAS } from '../lib/scoring';
+import { PREMIOS_ETAPA2 } from '../lib/premios';
 
 export default function Regras() {
   return (
@@ -25,30 +26,9 @@ export default function Regras() {
         Premiação
       </h3>
       <div className="grid-cards" style={{ marginBottom: 28 }}>
-        <Premio
-          ordem={1}
-          emoji="🥇"
-          posicao="Campeão"
-          premio="Kit Alta Performance"
-          detalhes="Whey · Creatina · Complexo B · Coenzima Q10 · Magnésio"
-          cor="#F4CC04"
-        />
-        <Premio
-          ordem={2}
-          emoji="🥈"
-          posicao="2º Lugar"
-          premio="Whey Protein"
-          detalhes=""
-          cor="#C0C0C0"
-        />
-        <Premio
-          ordem={3}
-          emoji="🥉"
-          posicao="3º Lugar"
-          premio="Creatina"
-          detalhes=""
-          cor="#CD7F32"
-        />
+        {PREMIOS_ETAPA2.map((p) => (
+          <Premio key={p.ordem} {...p} />
+        ))}
       </div>
       <div className="card" style={{
         marginBottom: 28,

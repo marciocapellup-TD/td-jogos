@@ -9,6 +9,9 @@ import {
 } from '../lib/competicao';
 import RankingBar from '../components/RankingBar';
 import StatCard from '../components/StatCard';
+import Podio from '../components/Podio';
+import { PREMIOS_ETAPA2 } from '../lib/premios';
+import { useAuth } from '../hooks/useAuth';
 
 const CHART_TOOLTIP_STYLE = {
   background: '#011F36',
@@ -31,9 +34,27 @@ function ordenarRanking(a, b) {
 }
 
 export default function Dashboard() {
+  const { isAdmin } = useAuth();
   const [etapaView, setEtapaView] = useState('etapa2'); // 'etapa1' | 'etapa2'
-  const [data, setData] = useState({ posts: [], profiles: [], groups: [] });
+  const [data, setData] = useState({ posts: [], profiles: [], groups: [], resultado: [] });
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [congelando, setCongelando] = useState(false);
+
+  // Congela o resultado oficial da etapa atual (admin). Server-side via RPC
+  // SECURITY DEFINER — o cliente nunca grava direto em resultado_etapa.
+  const congelarResultado = async () => {
+    const jaCongelado = data.resultado.length > 0;
+    const msg = jaCongelado
+      ? 'Recongelar vai RECALCULAR o resultado oficial da Etapa 2 com os posts aprovados agora. Continuar?'
+      : 'Congelar o resultado oficial da Etapa 2 com os posts aprovados agora? Isso fixa o pódio e o ranking final.';
+    if (!window.confirm(msg)) return;
+    setCongelando(true);
+    const { error } = await supabase.rpc('congelar_resultado_etapa', { p_etapa: 'etapa2' });
+    setCongelando(false);
+    if (error) { alert(error.message); return; }
+    setRefreshKey((k) => k + 1);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -51,16 +72,18 @@ export default function Dashboard() {
         .order('nome_exibicao');
       if (etapaView === 'etapa2') profQuery = profQuery.eq('ativo', true);
 
-      const [posts, profRes, groupRes] = await Promise.all([
+      const [posts, profRes, groupRes, resRes] = await Promise.all([
         fetchAllApprovedPosts('*', janela),
         profQuery,
         supabase.from('groups').select('*').order('id'),
+        supabase.from('resultado_etapa').select('*').eq('etapa', etapaView).order('posicao'),
       ]);
       if (!mounted) return;
       setData({
         posts,
         profiles: profRes.data || [],
         groups: groupRes.data || [],
+        resultado: resRes.data || [],
       });
       setLoading(false);
     };
@@ -83,7 +106,7 @@ export default function Dashboard() {
       document.removeEventListener('visibilitychange', onVisibility);
       supabase.removeChannel(channel);
     };
-  }, [etapaView]);
+  }, [etapaView, refreshKey]);
 
   const agregados = useMemo(() => {
     const { posts, profiles, groups } = data;
@@ -217,6 +240,10 @@ export default function Dashboard() {
           totalPosts={totalPosts}
           participantes={participantes}
           agregados={agregados}
+          resultado={data.resultado}
+          isAdmin={isAdmin}
+          onCongelar={congelarResultado}
+          congelando={congelando}
         />
       ) : (
         <Etapa1View
@@ -259,12 +286,60 @@ function Toggle({ etapa, onChange }) {
   );
 }
 
-function Etapa2View({ totalPosts, participantes, agregados }) {
-  const { rankingIndiv, porCategoriaPorGrupo, catTotal, serieIndividuais, top5Nomes, maisAtivos } = agregados;
+function Etapa2View({ totalPosts, participantes, agregados, resultado = [], isAdmin, onCongelar, congelando }) {
+  const { rankingIndiv, rankingIndivFull, porCategoriaPorGrupo, catTotal, serieIndividuais, top5Nomes, maisAtivos } = agregados;
   const maxIndiv = Math.max(1, ...rankingIndiv.map(r => r.pontos));
+
+  // Encerramento: se há snapshot congelado, é o resultado oficial; senão, prévia ao vivo.
+  const congelado = resultado.length > 0;
+  const fonteFinal = congelado
+    ? resultado.map(r => ({ id: r.user_id, nome: r.nome_exibicao, pontos: r.pontos, posicao: r.posicao }))
+    : rankingIndivFull.map((r, i) => ({ id: r.id, nome: r.nome, pontos: r.pontos, posicao: i + 1 }));
+  const top3 = fonteFinal.slice(0, 3).map(r => ({ posicao: r.posicao, nome: r.nome, pontos: r.pontos }));
+  const maxFinal = Math.max(1, MAX_PONTOS_CICLO, ...fonteFinal.map(r => r.pontos));
+  const congeladoEm = congelado ? new Date(resultado[0].congelado_em).toLocaleDateString('pt-BR') : null;
 
   return (
     <>
+      {/* Encerramento — pódio + ranking final oficial */}
+      <div style={{ marginBottom: 30 }}>
+        <h3 style={{ marginBottom: 4 }}>
+          {congelado ? '🏆 Resultado Oficial · Etapa 2' : 'Prévia do resultado final'}
+        </h3>
+        <div style={{ fontSize: 11, color: 'var(--branco-45)', marginBottom: 14 }}>
+          {congelado
+            ? `Ranking oficial congelado em ${congeladoEm}. Não muda mais, mesmo que um post pendente seja aprovado depois.`
+            : 'Ainda não congelado — ranking ao vivo dos posts aprovados.'}
+        </div>
+
+        <Podio top3={top3} premios={PREMIOS_ETAPA2} maxAcumulado={MAX_PONTOS_CICLO} />
+
+        <h3 style={{ marginBottom: 12 }}>Ranking final completo</h3>
+        <div className="card" style={{ marginBottom: 14 }}>
+          {fonteFinal.length === 0 && <div style={{ color: 'var(--branco-45)' }}>Sem dados ainda.</div>}
+          {fonteFinal.map((r, i) => (
+            <RankingBar
+              key={r.id} nome={r.nome} pontos={r.pontos}
+              max={maxFinal}
+              cor={PALETA[i % PALETA.length]}
+              posicao={r.posicao}
+              maxAcumulado={MAX_PONTOS_CICLO}
+            />
+          ))}
+        </div>
+
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={onCongelar}
+            disabled={congelando}
+            className={`btn ${congelado ? 'btn-ghost' : 'btn-primary cta-pulse'}`}
+          >
+            {congelando ? 'Congelando...' : congelado ? 'Recongelar (recalcular)' : 'Congelar resultado final'}
+          </button>
+        )}
+      </div>
+
       <div className="grid-cards" style={{ marginBottom: 24 }}>
         <StatCard label="Dia" value={`${diasDecorridos()} / 21`} sub="18/05 → 07/06" />
         <StatCard label="Registros aprovados" value={totalPosts} />

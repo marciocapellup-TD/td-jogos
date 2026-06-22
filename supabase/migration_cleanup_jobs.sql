@@ -1,11 +1,16 @@
 -- ============================================================================
 -- Migration: agenda pg_cron pra invocar a edge function `limpar-fotos-aprovadas`
--- 3 vezes ao dia em horários BR distintos (09:00 / 15:00 / 21:00).
+-- DE HORA EM HORA (0 * * * *).
 --
--- Limpa fotos do Storage de posts aprovados com mais de 4h (lógica na edge).
+-- A edge function delega a decisão pra RPC public.fotos_para_limpar() que apaga:
+--   órfãos (sem post vivo), aprovadas > 4h, e — se passar do teto de 500 MB —
+--   aprovadas recentes oldest-first. Protege pending/rejected.
 --
--- DEPENDÊNCIA: antes de rodar este arquivo, faça UMA VEZ no SQL Editor:
---   SELECT vault.create_secret('<SERVICE_ROLE_KEY_AQUI>', 'edge_fn_auth');
+-- DEPENDÊNCIA (auth durável, NÃO usa mais a service_role que rotaciona):
+--   o secret do Vault `edge_fn_auth` deve conter o MESMO valor do secret
+--   LIMPAR_FOTOS_SECRET setado na edge function. Setar UMA VEZ:
+--     SELECT vault.create_secret('<LIMPAR_FOTOS_SECRET>', 'edge_fn_auth');
+--   (ou vault.update_secret(id, '<...>') se já existir).
 -- ============================================================================
 
 -- 1) Habilita extensões (já vêm pré-instaladas no Supabase Free)
@@ -32,24 +37,19 @@ $$;
 REVOKE ALL ON FUNCTION public.disparar_limpar_fotos() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.disparar_limpar_fotos() FROM anon, authenticated;
 
--- 3) Remove jobs antigos com mesmo nome (idempotência se rodar de novo)
+-- 3) Remove jobs antigos (os 3 diários e o horário, p/ idempotência)
 DO $$
+DECLARE j text;
 BEGIN
-  PERFORM cron.unschedule('limpar-fotos-09br') WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname='limpar-fotos-09br');
-  PERFORM cron.unschedule('limpar-fotos-15br') WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname='limpar-fotos-15br');
-  PERFORM cron.unschedule('limpar-fotos-21br') WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname='limpar-fotos-21br');
-EXCEPTION WHEN OTHERS THEN
-  -- cron.unschedule pode não aceitar WHERE; alternativa abaixo
-  NULL;
+  FOREACH j IN ARRAY ARRAY['limpar-fotos-09br','limpar-fotos-15br','limpar-fotos-21br','limpar-fotos-hora'] LOOP
+    IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = j) THEN
+      PERFORM cron.unschedule(j);
+    END IF;
+  END LOOP;
 END $$;
 
--- 4) Agenda os 3 jobs (BR = UTC-3)
---    09:00 BR = 12:00 UTC
---    15:00 BR = 18:00 UTC
---    21:00 BR = 00:00 UTC
-SELECT cron.schedule('limpar-fotos-09br', '0 12 * * *', $$SELECT public.disparar_limpar_fotos();$$);
-SELECT cron.schedule('limpar-fotos-15br', '0 18 * * *', $$SELECT public.disparar_limpar_fotos();$$);
-SELECT cron.schedule('limpar-fotos-21br', '0 0 * * *',  $$SELECT public.disparar_limpar_fotos();$$);
+-- 4) Agenda 1 job de hora em hora
+SELECT cron.schedule('limpar-fotos-hora', '0 * * * *', $$SELECT public.disparar_limpar_fotos();$$);
 
 -- 5) Conferência: lista jobs ativos
 SELECT jobname, schedule, active FROM cron.job WHERE jobname LIKE 'limpar-fotos%' ORDER BY jobname;

@@ -1,6 +1,37 @@
 import { useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
+// Comprime/redimensiona a imagem no navegador (canvas, sem lib externa) antes do
+// upload: max 1280px no maior lado, JPEG q0.7. Foto de celular (~1,5MB) cai pra
+// ~150-300KB, segurando o Storage. Retorna null se não der (HEIC indecodável,
+// etc.) → o chamador faz fallback pro arquivo original.
+async function comprimirImagem(file, maxLado = 1280, quality = 0.7) {
+  try {
+    const dataUrl = await new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(fr.result);
+      fr.onerror = rej;
+      fr.readAsDataURL(file);
+    });
+    const img = await new Promise((res, rej) => {
+      const im = new Image();
+      im.onload = () => res(im);
+      im.onerror = rej;
+      im.src = dataUrl;
+    });
+    const escala = Math.min(1, maxLado / Math.max(img.width, img.height));
+    const w = Math.round(img.width * escala);
+    const h = Math.round(img.height * escala);
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    return await new Promise((res) => canvas.toBlob(res, 'image/jpeg', quality));
+  } catch {
+    return null;
+  }
+}
+
 export default function FotoUpload({ userId, onUploaded, urlAtual = null }) {
   // Se urlAtual vier (modo edição), usa como preview inicial até o user trocar.
   const [preview, setPreview] = useState(urlAtual || null);
@@ -25,12 +56,22 @@ export default function FotoUpload({ userId, onUploaded, urlAtual = null }) {
     setPreview(URL.createObjectURL(file));
     setUploading(true);
 
-    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+    // Comprime antes de subir. Se falhar ou não reduzir, mantém o original.
+    let toUpload = file;
+    let ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+    let contentType = file.type || 'image/jpeg';
+    const comprimido = await comprimirImagem(file);
+    if (comprimido && comprimido.size < file.size) {
+      toUpload = comprimido;
+      ext = 'jpg';
+      contentType = 'image/jpeg';
+    }
+
     const path = `${userId}/${Date.now()}.${ext || 'jpg'}`;
 
     const { error } = await supabase.storage
       .from('postagens')
-      .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type });
+      .upload(path, toUpload, { cacheControl: '3600', upsert: false, contentType });
 
     if (error) {
       console.error('[upload] erro:', error);

@@ -1,147 +1,104 @@
 // Edge Function: limpar-fotos-aprovadas
 //
-// Limpa fotos do Storage bucket `postagens` de posts com:
-//   - status = 'approved'
-//   - foto_liberada = false
-//   - created_at < now() - 4 horas
-//   - foto_url começa com 'https://' (pula imputações 'manual://...')
+// Limpeza storage-driven do bucket `postagens`. Delega a DECISÃO pra RPC
+// public.fotos_para_limpar(p_target_bytes, p_retencao), que retorna os paths a
+// apagar classificados em:
+//   - 'orfao' : objeto sem post de foto viva apontando (qualquer idade)
+//   - 'tempo' : post approved com foto viva e > retenção (4h)
+//   - 'teto'  : se o bucket ainda passar do alvo, approved recentes oldest-first
+// Apaga do Storage e marca os posts (post_id) com foto_liberada=true, foto_url=null.
+// Protege pending/rejected (a RPC não os inclui).
 //
-// Marca o post com foto_liberada=true e foto_url=null. Mantém pontos/status.
+// Invocado por: pg_cron (1x/h) e botão manual do Admin.
 //
-// Invocado por:
-//   - pg_cron 3x/dia (09:00, 15:00, 21:00 BR)
-//   - Botão manual no painel Admin
-//
-// Auth: precisa Authorization: Bearer <SERVICE_ROLE_KEY> ou <ANON_KEY> com user admin.
-// O service role é o que pg_cron usa (via vault).
+// Auth (autorizar):
+//   1) cron/serviço: header Bearer == LIMPAR_FOTOS_SECRET (segredo dedicado,
+//      não rotaciona como a service_role) OU == SERVICE_ROLE_KEY (fallback)
+//   2) Admin logado: JWT de user com profiles.role in admin/superadmin
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
+const CRON_SECRET = Deno.env.get('LIMPAR_FOTOS_SECRET') ?? '';
 const BUCKET = 'postagens';
-const RETENCAO_MS = 4 * 60 * 60 * 1000;  // 4 horas
-const BATCH_LIMIT = 500;
+const TARGET_BYTES_DEFAULT = Number(Deno.env.get('LIMPAR_TARGET_BYTES') ?? 524288000); // 500 MB
+const RETENCAO = '4 hours';
+const DELETE_BATCH = 100;
 
-// Client de serviço — usado SÓ depois de autorizar o caller.
 const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-// Autoriza a chamada. Retorna null se ok, ou Response com erro pra short-circuit.
-// Aceita 2 origens:
-//  1) pg_cron com service_role (header Authorization: Bearer <SERVICE_ROLE_KEY>)
-//  2) Admin logado (header com JWT do user, profiles.role in admin/superadmin)
 async function autorizar(req: Request): Promise<Response | null> {
   const auth = req.headers.get('Authorization') || '';
   const token = auth.replace(/^Bearer\s+/i, '').trim();
-  if (!token) {
-    return json({ erro: 'Authorization ausente' }, 401);
-  }
+  if (!token) return json({ erro: 'Authorization ausente' }, 401);
 
-  // Caso 1: chamada do pg_cron com service_role direto (não é JWT decodável de user)
-  if (token === SERVICE_ROLE) {
-    return null;
-  }
+  // Segredo dedicado do cron (preferido) ou service_role (fallback)
+  if (CRON_SECRET && token === CRON_SECRET) return null;
+  if (token === SERVICE_ROLE) return null;
 
-  // Caso 2: JWT de usuário — valida e checa role admin
+  // JWT de usuário — valida e checa role admin
   const userClient = createClient(SUPABASE_URL, ANON_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
   const { data: userData, error: userErr } = await userClient.auth.getUser();
-  if (userErr || !userData?.user) {
-    return json({ erro: 'Token inválido' }, 401);
-  }
+  if (userErr || !userData?.user) return json({ erro: 'Token inválido' }, 401);
   const { data: profile, error: pErr } = await adminClient
-    .from('profiles')
-    .select('role')
-    .eq('id', userData.user.id)
-    .maybeSingle();
+    .from('profiles').select('role').eq('id', userData.user.id).maybeSingle();
   if (pErr || !profile || !['admin', 'superadmin'].includes(profile.role)) {
     return json({ erro: 'Apenas admins podem disparar limpeza' }, 403);
   }
   return null;
 }
 
-// Extrai o path do bucket a partir da URL pública:
-// https://<ref>.supabase.co/storage/v1/object/public/postagens/<user_id>/<file>
-// → <user_id>/<file>
-const PATH_RE = new RegExp(`/storage/v1/object/public/${BUCKET}/(.+)$`);
-function extrairPath(url: string): string | null {
-  const m = url.match(PATH_RE);
-  return m ? decodeURIComponent(m[1]) : null;
-}
-
 Deno.serve(async (req) => {
-  // CORS básico pra invoke do front
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders() });
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() });
 
-  // Autoriza ANTES de tocar em qualquer coisa
   const blockedBy = await autorizar(req);
   if (blockedBy) return blockedBy;
 
   try {
-    const corte = new Date(Date.now() - RETENCAO_MS).toISOString();
+    const body = await req.json().catch(() => ({}));
+    const target = Number(body?.target_bytes ?? TARGET_BYTES_DEFAULT);
 
-    const { data: candidatos, error: qErr } = await adminClient
-      .from('posts')
-      .select('id, foto_url')
-      .eq('status', 'approved')
-      .eq('foto_liberada', false)
-      .lt('created_at', corte)
-      .like('foto_url', 'https://%')
-      .limit(BATCH_LIMIT);
-
-    if (qErr) throw qErr;
-    if (!candidatos || candidatos.length === 0) {
-      return json({ removidas: 0, erros: [], mensagem: 'Nada a limpar.' });
+    // 1) RPC decide o que apagar (vê storage.objects via SECURITY DEFINER)
+    const { data: alvos, error: rpcErr } = await adminClient.rpc('fotos_para_limpar', {
+      p_target_bytes: target,
+      p_retencao: RETENCAO,
+    });
+    if (rpcErr) throw rpcErr;
+    if (!alvos || alvos.length === 0) {
+      return json({ removidos: 0, alvos: 0, mensagem: 'Nada a limpar.' });
     }
 
-    const idsPorPath = new Map<string, string>();
-    const pathsValidos: string[] = [];
-    const erros: { id: string; razao: string }[] = [];
-
-    for (const p of candidatos) {
-      const path = extrairPath(p.foto_url);
-      if (!path) {
-        erros.push({ id: p.id, razao: `URL fora do padrão: ${p.foto_url}` });
-        continue;
-      }
-      idsPorPath.set(path, p.id);
-      pathsValidos.push(path);
+    // 2) Apaga do Storage em lotes (404 é idempotente, não falha)
+    const paths: string[] = alvos.map((a: { path: string }) => a.path);
+    const erros: string[] = [];
+    let removidos = 0;
+    for (let i = 0; i < paths.length; i += DELETE_BATCH) {
+      const batch = paths.slice(i, i + DELETE_BATCH);
+      const { data: rem, error: rmErr } = await adminClient.storage.from(BUCKET).remove(batch);
+      if (rmErr) { console.error('[storage.remove]', rmErr); erros.push(rmErr.message); continue; }
+      removidos += rem?.length ?? 0;
     }
 
-    // Remove do Storage (idempotente — 404 não dá erro)
-    if (pathsValidos.length > 0) {
-      const { error: rmErr } = await adminClient.storage.from(BUCKET).remove(pathsValidos);
-      if (rmErr) {
-        console.error('[storage.remove]', rmErr);
-        erros.push({ id: 'storage-remove', razao: rmErr.message });
-      }
-    }
-
-    const idsParaUpdate = [...idsPorPath.values()];
-    if (idsParaUpdate.length > 0) {
+    // 3) Marca os posts correspondentes (órfãos têm post_id null → pula)
+    const ids: string[] = alvos
+      .filter((a: { post_id: string | null }) => a.post_id)
+      .map((a: { post_id: string }) => a.post_id);
+    for (let i = 0; i < ids.length; i += 200) {
       const { error: upErr } = await adminClient
         .from('posts')
         .update({ foto_liberada: true, foto_url: null })
-        .in('id', idsParaUpdate);
-
-      if (upErr) {
-        console.error('[posts.update]', upErr);
-        erros.push({ id: 'posts-update', razao: upErr.message });
-      }
+        .in('id', ids.slice(i, i + 200));
+      if (upErr) { console.error('[posts.update]', upErr); erros.push(upErr.message); }
     }
 
-    return json({
-      removidas: idsParaUpdate.length,
-      candidatos_total: candidatos.length,
-      erros,
-    });
+    return json({ alvos: alvos.length, removidos, posts_marcados: ids.length, erros });
   } catch (err) {
     console.error('[limpar-fotos-aprovadas]', err);
     return json({ erro: String(err) }, 500);

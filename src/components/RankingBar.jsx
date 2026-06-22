@@ -1,6 +1,7 @@
 export default function RankingBar({
   nome, pontos, max, cor, posicao,
   pontosHoje, maxHoje, maxAcumulado,
+  expansivel, aberto,
 }) {
   const pct = max > 0 ? (pontos / max) * 100 : 0;
   const bateuHoje = maxHoje && pontosHoje >= maxHoje;
@@ -17,6 +18,14 @@ export default function RankingBar({
         gap: 6,
       }}>
         <span style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 600 }}>
+          {expansivel && (
+            <span style={{
+              display: 'inline-block', width: 12, textAlign: 'center',
+              color: 'var(--branco-45)', marginRight: 6, fontSize: 10,
+              transition: 'transform 0.2s',
+              transform: aberto ? 'rotate(90deg)' : 'rotate(0deg)',
+            }}>▶</span>
+          )}
           {posicao && <span style={{ color: 'var(--amarelo)', marginRight: 8 }}>#{posicao}</span>}
           {nome}
           {bateuHoje && (

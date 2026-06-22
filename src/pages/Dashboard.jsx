@@ -9,6 +9,7 @@ import {
   DATA_INICIO_ETAPA3, DATA_FIM_ETAPA3,
 } from '../lib/competicao';
 import RankingBar from '../components/RankingBar';
+import RankingBarExpansivel from '../components/RankingBarExpansivel';
 import StatCard from '../components/StatCard';
 import Podio from '../components/Podio';
 import PodioGrupos from '../components/PodioGrupos';
@@ -310,6 +311,8 @@ function EtapaIndividualView({ etapa, totalPosts, participantes, agregados, resu
   const maxIndiv = Math.max(1, ...rankingIndiv.map(r => r.pontos));
   const ehAtual = etapa === 'etapa3';
   const etapaLabel = ehAtual ? 'Etapa 3' : 'Etapa 2';
+  // Drill-down (clicar → ver histórico) só na Etapa 3.
+  const expansivel = etapa === 'etapa3';
 
   // Encerramento: se há snapshot congelado, é o resultado oficial; senão, prévia ao vivo.
   const congelado = resultado.length > 0;
@@ -339,13 +342,27 @@ function EtapaIndividualView({ etapa, totalPosts, participantes, agregados, resu
         <div className="card" style={{ marginBottom: 14 }}>
           {fonteFinal.length === 0 && <div style={{ color: 'var(--branco-45)' }}>Sem dados ainda.</div>}
           {fonteFinal.map((r, i) => (
-            <RankingBar
-              key={r.id} nome={r.nome} pontos={r.pontos}
-              max={maxFinal}
-              cor={PALETA[i % PALETA.length]}
-              posicao={r.posicao}
-              maxAcumulado={maxAcumulado || undefined}
-            />
+            expansivel ? (
+              <RankingBarExpansivel
+                key={r.id}
+                userId={r.id}
+                dataDe={DATA_INICIO_ETAPA3}
+                dataAte={DATA_FIM_ETAPA3}
+                nome={r.nome} pontos={r.pontos}
+                max={maxFinal}
+                cor={PALETA[i % PALETA.length]}
+                posicao={r.posicao}
+                maxAcumulado={maxAcumulado || undefined}
+              />
+            ) : (
+              <RankingBar
+                key={r.id} nome={r.nome} pontos={r.pontos}
+                max={maxFinal}
+                cor={PALETA[i % PALETA.length]}
+                posicao={r.posicao}
+                maxAcumulado={maxAcumulado || undefined}
+              />
+            )
           ))}
         </div>
 
@@ -378,13 +395,27 @@ function EtapaIndividualView({ etapa, totalPosts, participantes, agregados, resu
       <div className="card" style={{ marginBottom: 26 }}>
         {rankingIndiv.length === 0 && <div style={{ color: 'var(--branco-45)' }}>Sem dados ainda.</div>}
         {rankingIndiv.map((r, i) => (
-          <RankingBar
-            key={r.id} nome={r.nome} pontos={r.pontos}
-            max={maxAcumulado ? Math.max(maxIndiv, maxAcumulado) : maxIndiv}
-            cor={PALETA[i % PALETA.length]}
-            posicao={i + 1}
-            maxAcumulado={maxAcumulado || undefined}
-          />
+          expansivel ? (
+            <RankingBarExpansivel
+              key={r.id}
+              userId={r.id}
+              dataDe={DATA_INICIO_ETAPA3}
+              dataAte={DATA_FIM_ETAPA3}
+              nome={r.nome} pontos={r.pontos}
+              max={maxAcumulado ? Math.max(maxIndiv, maxAcumulado) : maxIndiv}
+              cor={PALETA[i % PALETA.length]}
+              posicao={i + 1}
+              maxAcumulado={maxAcumulado || undefined}
+            />
+          ) : (
+            <RankingBar
+              key={r.id} nome={r.nome} pontos={r.pontos}
+              max={maxAcumulado ? Math.max(maxIndiv, maxAcumulado) : maxIndiv}
+              cor={PALETA[i % PALETA.length]}
+              posicao={i + 1}
+              maxAcumulado={maxAcumulado || undefined}
+            />
+          )
         ))}
       </div>
 

@@ -54,3 +54,26 @@ export async function fetchAllApprovedPosts(select = '*', opts = {}) {
   }
   return all;
 }
+
+// Posts aprovados de UM usuário específico, opcionalmente dentro de uma janela
+// de etapa ({ dataDe, dataAte } YYYY-MM-DD). Usado no drill-down do ranking
+// (clicar numa pessoa → ver o histórico de pontos dela). Mais recente primeiro.
+// O RLS (posts_read) libera leitura de posts 'approved' de qualquer usuário.
+export async function fetchApprovedPostsByUser(userId, opts = {}) {
+  if (!userId) return [];
+  let q = supabase
+    .from('posts')
+    .select('id, categoria, data_registro, pontos, quantidade_frutas, tipo_alimento, horario, minutos, segundos, tipo_cultura, comentario, created_at')
+    .eq('user_id', userId)
+    .eq('status', 'approved')
+    .order('data_registro', { ascending: false })
+    .order('created_at', { ascending: false });
+  if (opts.dataDe)  q = q.gte('data_registro', opts.dataDe);
+  if (opts.dataAte) q = q.lte('data_registro', opts.dataAte);
+  const { data, error } = await q;
+  if (error) {
+    console.error('[fetchApprovedPostsByUser] erro', error);
+    return [];
+  }
+  return data || [];
+}

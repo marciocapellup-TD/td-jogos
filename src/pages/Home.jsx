@@ -7,6 +7,7 @@ import { CATEGORIAS } from '../lib/scoring';
 import { competicaoEncerrada, entreEtapas, DATA_INICIO_ETAPA3, DATA_FIM_ETAPA3 } from '../lib/competicao';
 import StatCard from '../components/StatCard';
 import RankingBar from '../components/RankingBar';
+import RankingBarExpansivel from '../components/RankingBarExpansivel';
 
 // Ordena ranking: pontos desc; empate → quem postou primeiro (menor created_at do último post).
 function ordenarRanking(a, b) {
@@ -213,8 +214,11 @@ export default function Home() {
           topN.map((u, i) => {
             const ehVoce = u.id === profile?.id;
             return (
-              <RankingBar
+              <RankingBarExpansivel
                 key={u.id}
+                userId={u.id}
+                dataDe={DATA_INICIO_ETAPA3}
+                dataAte={DATA_FIM_ETAPA3}
                 nome={ehVoce ? `${u.nome} (você)` : u.nome}
                 pontos={u.pontos}
                 max={maxPontos}
@@ -228,7 +232,10 @@ export default function Home() {
         {/* Sua linha se estiver fora do top 15 */}
         {profile?.id && meuRank && meuRank > 15 && (
           <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px dashed rgba(255,255,255,0.08)' }}>
-            <RankingBar
+            <RankingBarExpansivel
+              userId={profile.id}
+              dataDe={DATA_INICIO_ETAPA3}
+              dataAte={DATA_FIM_ETAPA3}
               nome={`${profile.nome_exibicao} (você)`}
               pontos={meusPontos}
               max={maxPontos}

@@ -10,9 +10,17 @@ export default function RankingBarExpansivel({
 }) {
   const [aberto, setAberto] = useState(false);
 
+  const toggle = () => setAberto((v) => !v);
+
   return (
     <div>
-      <div onClick={() => setAberto((v) => !v)} style={{ cursor: 'pointer', userSelect: 'none' }}>
+      <div
+        onClick={toggle}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }}
+        style={{ cursor: 'pointer', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+      >
         <RankingBar {...rankingProps} cor={cor} expansivel aberto={aberto} />
       </div>
       {aberto && (

@@ -66,6 +66,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true); // só no mount/troca de etapa; refetch em background não pisca/remonta a tela
 
     const janela = etapaView === 'etapa1'
       ? { dataDe: DATA_INICIO_ETAPA1, dataAte: DATA_FIM_ETAPA1 }
@@ -74,7 +75,6 @@ export default function Dashboard() {
         : { dataDe: DATA_INICIO_ETAPA3, dataAte: DATA_FIM_ETAPA3 };
 
     const fetchAll = async () => {
-      if (mounted) setLoading(true);
       // Etapa 2/3 (individual): só profiles ativos.
       // Etapa 1: todos os profiles (preserva histórico de quem participou e depois saiu).
       let profQuery = supabase.from('profiles')

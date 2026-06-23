@@ -86,7 +86,7 @@ export const CATEGORIAS = {
   hidratacao: { label: 'Hidratação', emoji: '💧', cor: '#06B6D4', dica: 'Garrafinha + horário — 1 ponto por registro, sem limite',  meta: 'Meta do dia: 3 registros (manhã, tarde, noite)' },
   movimento:  { label: 'Movimento',  emoji: '🏃', cor: '#3B82F6', dica: 'Print de exercício — 5 pontos a cada 50 min',              meta: 'Meta do dia: 50 min' },
   mental:     { label: 'Mental',     emoji: '🧠', cor: '#8B5CF6', dica: 'Print de meditação — 4 pontos a cada 10 min',              meta: 'Meta do dia: 10 min' },
-  cultura:    { label: 'Cultura',    emoji: '🎭', cor: '#F59E0B', dica: 'Livro, podcast, hobby, passeio ou exposição — 3 pontos',    meta: 'Meta do dia: 1 atividade' },
+  cultura:    { label: 'Cultura',    emoji: '🎭', cor: '#F59E0B', dica: 'Livro, podcast, hobby ou exposição — 3 pontos',    meta: 'Meta do dia: 1 atividade' },
 };
 
 // Labels auxiliares pra UI
@@ -101,7 +101,9 @@ export const HORARIO_LABEL = {
   noite: { label: 'Noite', emoji: '🌙' },
 };
 
-// Atividades do pilar Cultura (Etapa 3)
+// Atividades do pilar Cultura (Etapa 3).
+// CULTURA_LABEL mantém TODAS (inclui 'passeio') só para EXIBIR posts antigos.
+// CULTURA_TIPOS é o que pode ser SELECIONADO ao postar (passeio foi removido).
 export const CULTURA_LABEL = {
   livro:     { label: 'Ler um livro',          emoji: '📚' },
   podcast:   { label: 'Ouvir um podcast',      emoji: '🎧' },
@@ -109,3 +111,5 @@ export const CULTURA_LABEL = {
   passeio:   { label: 'Passeio / lugar novo',  emoji: '🌳' },
   exposicao: { label: 'Exposição / museu',     emoji: '🏛️' },
 };
+
+export const CULTURA_TIPOS = ['livro', 'podcast', 'hobby', 'exposicao'];

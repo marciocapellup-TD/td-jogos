@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { CATEGORIAS, HORARIO_LABEL, CULTURA_LABEL, previewPontos } from '../lib/scoring';
+import { CATEGORIAS, HORARIO_LABEL, CULTURA_LABEL, CULTURA_TIPOS, previewPontos } from '../lib/scoring';
 import { hojeISO, horaBR } from '../lib/dates';
 import { competicaoEncerrada, entreEtapas } from '../lib/competicao';
 import FotoUpload from '../components/FotoUpload';
@@ -200,14 +200,14 @@ export default function Postar() {
           <div className="form-group">
             <label>Qual atividade cultural?</label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {Object.entries(CULTURA_LABEL).map(([k, v]) => (
+              {CULTURA_TIPOS.map((k) => (
                 <button
                   type="button" key={k}
                   onClick={() => setTipoCultura(k)}
                   className={`btn ${tipoCultura === k ? 'btn-primary' : 'btn-ghost'}`}
                   style={{ flex: '1 1 40%' }}
                 >
-                  {v.emoji} {v.label}
+                  {CULTURA_LABEL[k].emoji} {CULTURA_LABEL[k].label}
                 </button>
               ))}
             </div>

@@ -54,7 +54,7 @@ export default function Regras() {
         <CategoriaCard emoji="🧠" cor="#8B5CF6" titulo="Mental" pontos="4 pts / 10 min"
           descricao="Print Calm, Headspace ou app de meditação." limite="Sem teto · 20 min = 8 pts" />
         <CategoriaCard emoji="🎭" cor="#F59E0B" titulo="Cultura" pontos="3 pts / atividade"
-          descricao="Ler um livro, ouvir um podcast, hobby/arte, passeio ou exposição." limite="Sem limite · meta mínima 1/dia" />
+          descricao="Ler um livro, ouvir um podcast, hobby/arte ou exposição." limite="Sem limite · meta mínima 1/dia" />
       </div>
 
       {/* Sem teto */}
@@ -80,7 +80,7 @@ export default function Regras() {
         <ol style={{ paddingLeft: 20, fontSize: 13, lineHeight: 1.8, color: 'var(--branco-70)' }}>
           <li>Na Home, clica no card do pilar (🍎 / 🥗 / 💧 / 🏃 / 🧠 / 🎭)</li>
           <li>Em <strong>Energia</strong>: informa quantas frutas comeu</li>
-          <li>Em <strong>Cultura</strong>: escolhe a atividade (livro, podcast, hobby, passeio ou exposição)</li>
+          <li>Em <strong>Cultura</strong>: escolhe a atividade (livro, podcast, hobby ou exposição)</li>
           <li>Em <strong>Movimento</strong>/<strong>Mental</strong>: informa os minutos registrados no app</li>
           <li>Anexa a foto comprovando (câmera ou galeria)</li>
           <li>Envia para aprovação — pode registrar quantas vezes quiser no dia</li>

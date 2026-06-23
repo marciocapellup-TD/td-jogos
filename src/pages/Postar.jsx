@@ -262,7 +262,11 @@ export default function Postar() {
 
         <div className="form-group">
           <label>Foto comprovando</label>
-          <FotoUpload userId={profile.id} onUploaded={setFotoUrl} />
+          <FotoUpload
+            userId={profile.id}
+            onUploaded={setFotoUrl}
+            somenteCamera={['energia', 'salada', 'hidratacao'].includes(categoria)}
+          />
           <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 6 }}>{cat.dica}</div>
         </div>
 

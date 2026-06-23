@@ -284,6 +284,7 @@ export default function EditarPost() {
             userId={post.user_id}
             urlAtual={post.foto_url}
             onUploaded={setNovaFotoUrl}
+            somenteCamera={['energia', 'salada', 'hidratacao'].includes(post.categoria)}
           />
           <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 6 }}>
             {cat.dica} · Trocar a foto apaga a antiga.

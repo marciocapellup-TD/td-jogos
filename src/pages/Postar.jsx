@@ -78,10 +78,20 @@ export default function Postar() {
     data: hojeISO(),
   });
 
+  // Limites da gestão (E3): cultura máx 2/dia; mental conta só 20 min/dia (8 pts).
+  const naoRejeitadosHoje = postsHoje.filter(p => p.status !== 'rejected');
+  const culturaCheia = categoria === 'cultura' && naoRejeitadosHoje.length >= 2;
+  const mentalPtsHoje = categoria === 'mental'
+    ? naoRejeitadosHoje.filter(p => p.status === 'approved').reduce((a, p) => a + (p.pontos || 0), 0)
+    : 0;
+  const mentalRestante = Math.max(0, 8 - mentalPtsHoje); // 8 pts = 20 min/dia
+  const pontosPreviewFinal = categoria === 'mental' ? Math.min(pontosPreview, mentalRestante) : pontosPreview;
+
   const enviar = async (e) => {
     e.preventDefault();
     setErro(null);
     if (!fotoUrl) { setErro('Envie a foto antes de postar.'); return; }
+    if (culturaCheia) { setErro('Máximo de 2 registros de cultura por dia.'); return; }
     if ((categoria === 'movimento' || categoria === 'mental') && !duracaoValida) {
       setErro('Informe a duração (minutos e/ou segundos).'); return;
     }
@@ -212,8 +222,13 @@ export default function Postar() {
               ))}
             </div>
             <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 6 }}>
-              3 pontos por atividade, sem limite. Faça mais de uma e pontue mais.
+              3 pontos por atividade · <strong>máximo 2 por dia</strong>. Hoje: {naoRejeitadosHoje.length}/2.
             </div>
+            {culturaCheia && (
+              <div style={{ fontSize: 12, color: 'var(--vermelho)', marginTop: 6 }}>
+                Você já registrou 2 atividades culturais hoje — limite diário atingido.
+              </div>
+            )}
           </div>
         )}
 
@@ -255,7 +270,9 @@ export default function Postar() {
               </div>
             </div>
             <div style={{ fontSize: 11, color: 'var(--branco-45)', marginTop: 6 }}>
-              Sem teto: cada bloco completo soma de novo (ex: 100 min de movimento = 10 pts).
+              {categoria === 'movimento'
+                ? 'Envie o print com data, horário e duração (Strava ou Adidas Running). Sem teto: cada 50 min completos = +5 pts.'
+                : 'Limite de 20 min/dia (máximo 8 pts), conforme recomendação do Dr. Fabrício. Pode registrar mais, mas só conta até 20 min.'}
             </div>
           </div>
         )}
@@ -294,10 +311,17 @@ export default function Postar() {
           padding: '10px 14px', margin: '14px 0',
           fontFamily: 'Rajdhani', fontSize: 13, letterSpacing: 1,
         }}>
-          Se aprovado, você ganha <strong style={{ color: 'var(--amarelo)', fontSize: 18 }}>+{pontosPreview} pt</strong>
-          {pontosPreview === 0 && (categoria === 'movimento' || categoria === 'mental') && duracaoValida && (
+          Se aprovado, você ganha <strong style={{ color: 'var(--amarelo)', fontSize: 18 }}>+{pontosPreviewFinal} pt</strong>
+          {pontosPreviewFinal === 0 && (categoria === 'movimento' || categoria === 'mental') && duracaoValida && (
             <div style={{ fontSize: 11, color: 'var(--vermelho)', letterSpacing: 0, marginTop: 4 }}>
-              (abaixo de {categoria === 'movimento' ? '50 min' : '10 min'} — ainda sem pontos; cada bloco completo pontua)
+              {categoria === 'mental' && mentalRestante === 0
+                ? '(você já atingiu o limite de 20 min de mental hoje — este registro não soma pontos)'
+                : `(abaixo de ${categoria === 'movimento' ? '50 min' : '10 min'} — ainda sem pontos; cada bloco completo pontua)`}
+            </div>
+          )}
+          {categoria === 'mental' && pontosPreviewFinal > 0 && pontosPreview > pontosPreviewFinal && (
+            <div style={{ fontSize: 11, color: 'var(--branco-45)', letterSpacing: 0, marginTop: 4 }}>
+              (limite de 20 min/dia — contam só os {mentalRestante} pt restantes de mental hoje)
             </div>
           )}
         </div>
@@ -314,7 +338,7 @@ export default function Postar() {
           <button type="button" className="btn btn-ghost" onClick={() => navigate('/')}>Cancelar</button>
           <button
             type="submit" className="btn btn-primary" style={{ flex: 1 }}
-            disabled={enviando || bloqueado || !fotoUrl}
+            disabled={enviando || bloqueado || !fotoUrl || culturaCheia}
           >
             {encerrada ? 'Etapa 3 encerrada'
               : aindaNaoComecou ? 'Aguarde 22/06'

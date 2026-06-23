@@ -44,17 +44,17 @@ export default function Regras() {
       <h3 style={{ marginBottom: 12 }}>Os 6 pilares</h3>
       <div className="grid-cards" style={{ marginBottom: 28 }}>
         <CategoriaCard emoji="🍎" cor="#10B981" titulo="Energia" pontos="1 pt / fruta"
-          descricao="Foto de fruta(s). Comeu 5? Ganha 5 pontos." limite="Sem limite · meta mínima 3/dia" />
+          descricao="Foto tirada na hora (câmera). Comeu 5? Ganha 5 pontos." limite="Tempo real · sem galeria · meta 3/dia" />
         <CategoriaCard emoji="🥗" cor="#22C55E" titulo="Salada e Vegetais" pontos="1 pt / refeição"
-          descricao="Salada/vegetal no almoço e na janta, com foto dos pratos." limite="Sem limite · meta mínima 2/dia" />
+          descricao="Salada/vegetal no almoço e na janta, foto tirada na hora." limite="Tempo real · sem galeria · meta 2/dia" />
         <CategoriaCard emoji="💧" cor="#06B6D4" titulo="Hidratação" pontos="1 pt / registro"
-          descricao="Foto com a garrafinha + horário (manhã, tarde, noite)." limite="Sem limite · meta mínima 3/dia" />
+          descricao="Garrafinha + horário, foto tirada na hora (sem galeria)." limite="Tempo real · sem galeria · meta 3/dia" />
         <CategoriaCard emoji="🏃" cor="#3B82F6" titulo="Movimento" pontos="5 pts / 50 min"
-          descricao="Print do Strava ou app de exercício. Constância nos 30 dias." limite="Sem teto · 100 min = 10 pts" />
+          descricao="Print do Strava ou Adidas Running com data, horário e duração da atividade." limite="Sem teto · 100 min = 10 pts" />
         <CategoriaCard emoji="🧠" cor="#8B5CF6" titulo="Mental" pontos="4 pts / 10 min"
-          descricao="Print Calm, Headspace ou app de meditação." limite="Sem teto · 20 min = 8 pts" />
+          descricao="Print Calm, Headspace ou app de meditação." limite="Máx 20 min/dia (8 pts) · Dr. Fabrício" />
         <CategoriaCard emoji="🎭" cor="#F59E0B" titulo="Cultura" pontos="3 pts / atividade"
-          descricao="Ler um livro, ouvir um podcast, hobby/arte ou exposição." limite="Sem limite · meta mínima 1/dia" />
+          descricao="Ler um livro, ouvir um podcast, hobby/arte ou exposição." limite="Mínimo 1 · máximo 2 por dia" />
       </div>
 
       {/* Sem teto */}
@@ -63,14 +63,16 @@ export default function Regras() {
         background: 'linear-gradient(135deg, rgba(244,204,4,0.08), transparent)',
         marginBottom: 28,
       }}>
-        <div className="label" style={{ marginBottom: 8 }}>🚀 Sem pontuação máxima</div>
+        <div className="label" style={{ marginBottom: 8 }}>🚀 Quanto mais constância, mais pontos</div>
         <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--branco-70)' }}>
-          Os pontos de cada pilar são a <strong>meta mínima diária</strong>, não um limite. Quanto mais hábitos saudáveis
-          você incorpora à rotina, mais pontos conquista:
+          Frutas, salada, hidratação e movimento <strong>não têm teto</strong> — quanto mais hábitos saudáveis
+          na sua rotina, mais pontos conquista:
           <div style={{ marginTop: 8 }}>🍎 5 frutas no dia = <strong style={{ color: 'var(--amarelo)' }}>5 pts</strong></div>
-          <div>🥗 salada em 3 refeições = <strong style={{ color: 'var(--amarelo)' }}>3 pts</strong></div>
+          <div>🥗 salada no almoço e na janta = <strong style={{ color: 'var(--amarelo)' }}>2 pts</strong></div>
           <div>🏃 musculação de manhã + vôlei à noite (2×50 min) = <strong style={{ color: 'var(--amarelo)' }}>10 pts</strong></div>
-          <div>🎭 mais de uma atividade cultural = <strong style={{ color: 'var(--amarelo)' }}>mais pontos</strong></div>
+          <div style={{ marginTop: 10, color: 'var(--branco-45)' }}>
+            🧠 Mental e 🎭 Cultura têm <strong>limite saudável</strong>: até 20 min/dia de mental (8 pts) e no máximo 2 atividades culturais por dia.
+          </div>
         </div>
       </div>
 

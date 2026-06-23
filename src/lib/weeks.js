@@ -19,8 +19,8 @@ export const METAS_ETAPA3 = {
   salada:     { pts: 1, meta_min_dia: 2 },
   hidratacao: { pts: 1, meta_min_dia: 3, horarios: ['manha', 'tarde', 'noite'] },
   movimento:  { meta_min: 50, bloco_min: 50, pts_por_bloco: 5 },
-  mental:     { meta_min: 10, bloco_min: 10, pts_por_bloco: 4 },
-  cultura:    { pts: 3, tipos: ['livro', 'podcast', 'hobby', 'exposicao'] },
+  mental:     { meta_min: 10, bloco_min: 10, pts_por_bloco: 4, max_min_dia: 20, max_pts_dia: 8 },
+  cultura:    { pts: 3, max_dia: 2, tipos: ['livro', 'podcast', 'hobby', 'exposicao'] },
 };
 export const METAS = METAS_ETAPA3;
 

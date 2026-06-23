@@ -114,14 +114,14 @@ export default function Home() {
 
       {/* Como pontuar (Etapa 3 — planas, sem teto) */}
       <div className="card" style={{ marginBottom: 24 }}>
-        <div className="label" style={{ marginBottom: 10 }}>Como pontuar · sem teto, quanto mais você faz mais pontua</div>
+        <div className="label" style={{ marginBottom: 10 }}>Como pontuar · constância é tudo</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 14 }}>
           <Pilar emoji="🍎" pts="+1 / fruta" desc="meta 3 frutas/dia" />
           <Pilar emoji="🥗" pts="+1 / refeição" desc="salada no almoço e janta" />
           <Pilar emoji="💧" pts="+1 / registro" desc="manhã, tarde e noite" />
-          <Pilar emoji="🏃" pts="+5 / 50 min" desc="movimento, constância" />
-          <Pilar emoji="🧠" pts="+4 / 10 min" desc="mental, constância" />
-          <Pilar emoji="🎭" pts="+3 / atividade" desc="cultura (livro, podcast...)" />
+          <Pilar emoji="🏃" pts="+5 / 50 min" desc="Strava/Adidas, sem teto" />
+          <Pilar emoji="🧠" pts="+4 / 10 min" desc="máx 20 min/dia" />
+          <Pilar emoji="🎭" pts="+3 / atividade" desc="1 a 2 por dia" />
         </div>
       </div>
 

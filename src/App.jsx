@@ -9,6 +9,7 @@ import MeusPosts from './pages/MeusPosts';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import Regras from './pages/Regras';
+import Transparencia from './pages/Transparencia';
 import EditarPost from './pages/EditarPost';
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="meus-posts" element={<MeusPosts />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="regras" element={<Regras />} />
+          <Route path="transparencia" element={<Transparencia />} />
           <Route path="admin" element={<ProtectedRoute admin><Admin /></ProtectedRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

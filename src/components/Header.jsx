@@ -22,6 +22,7 @@ export default function Header() {
           <NavLink to="/dashboard">Dashboard</NavLink>
           <NavLink to="/meus-posts">Meus posts</NavLink>
           <NavLink to="/regras">Regras</NavLink>
+          <NavLink to="/transparencia">Auditoria</NavLink>
           {isAdmin && <NavLink to="/admin">Admin</NavLink>}
         </nav>
         <div className="td-user">
